@@ -980,7 +980,8 @@ body.theme-brainrot #stage-ground{ --t1: #7a1f4e; --t2: #6b1a44; }
   display: flex; align-items: flex-end; justify-content: center;
 }
 .mascot.big { transform: scale(2.3); transform-origin: center; margin: 45px 0 75px; }
-.node-mascot { transform: translateX(-50%); top: -64px; }
+.node-mascot { transform: translateX(-50%); top: -48px; }
+.node-wrap { z-index: 6; }
 .kid-jump { animation: kid-jump .5s cubic-bezier(.3,0,.4,1); }
 @keyframes kid-jump { 30% { transform: translateY(-30px) scale(1.05, .95); } 60% { transform: translateY(-30px); } }
 
