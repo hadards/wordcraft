@@ -1112,6 +1112,8 @@ function renderShop() {
 }
 
 // ---------- dev cheats: #all unlocks everything, #reset wipes progress ----------
+// typing a hash into an open page doesn't reload it — force the reload so cheats always run
+window.addEventListener("hashchange", () => location.reload());
 if (location.hash === "#reset") { S = defaultState(); save(); }
 if (location.hash === "#all") {
   ZONES.forEach((z) => {
@@ -1141,6 +1143,7 @@ $("btn-skip").onclick = () => {
 };
 $("hud-shop").onclick = () => { sfx.pop(); session = null; renderShop(); };
 $("hud-sound").onclick = () => { S.muted = !S.muted; save(); renderHUD(); if (!S.muted) sfx.pop(); };
+if (location.hash === "#all") renderMap(); // show the unlocked world immediately
 // cycle through English voices; each tap speaks a sample so you can pick by ear
 $("hud-voice").onclick = () => {
   const vs = enVoices();
