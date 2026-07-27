@@ -1032,6 +1032,15 @@ body[class*="theme-"] .built-row .built-word { border-radius: 0; }
 .zone-brainrot { background: #8e2270; }
 .map-path path { stroke-dasharray: 6 10; stroke-linecap: butt; stroke-width: 6; }
 
+#btn-skip {
+  position: fixed;
+  right: 14px;
+  bottom: 58px;
+  z-index: 40;
+  font-size: 1.2rem;
+  opacity: .85;
+}
+
 /* pixel font accents elsewhere */
 #build-tag, .shop-title { font-family: var(--font-pixel); font-size: .75rem; }
 .shop-title { padding: 10px; }

@@ -533,7 +533,8 @@ function answered(round, ok, el) {
       if (boss) { boss.classList.add("hit"); sfx.hit(); }
     }
     s.i++;
-    setTimeout(nextRound, 1100);
+    const myI = s.i;
+    setTimeout(() => { if (session === s && s.i === myI) nextRound(); }, 1100);
   } else {
     st.w++;
     s.streak = 0;
@@ -553,6 +554,13 @@ function endSession() {
   const s = session;
   const zs = zoneState(s.zone.id);
   if (s.boss) {
+    if (s.bossHp > 0) {
+      // skipped through the fight — boss survives, no steal
+      celebrate(`<div class="celebrate-big">${s.zone.boss.emoji}</div><div class="celebrate-text">TRY AGAIN!</div>`, 2000, renderMap);
+      speak("Almost! Try again!");
+      session = null;
+      return;
+    }
     zs.boss = true;
     S.coins += 50;
     if (!S.brainrots.includes(s.zone.boss.name)) S.brainrots.push(s.zone.boss.name);
@@ -597,12 +605,15 @@ function promptFor(word, mode, area) {
 const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo" };
 
 const RENDER = {
-  // hear it, see it — auto-advances
+  // hear it, see it — auto-advances (guarded so a skip mid-intro can't double-advance)
   intro(word, area) {
+    const myI = session.i;
     area.innerHTML = `<div class="intro-card"><div class="big-emoji">${word.emoji}</div><div class="word-label">${word.word.toUpperCase()}</div></div>`;
     setTimeout(() => speak(word.word, {
       onend: () => setTimeout(() => speak(word.word, {
-        onend: () => setTimeout(() => { session.i++; nextRound(); }, 500),
+        onend: () => setTimeout(() => {
+          if (session && session.i === myI) { session.i++; nextRound(); }
+        }, 500),
       }), 400),
     }), 350);
   },
@@ -1116,6 +1127,13 @@ $("btn-play").onclick = () => {
   renderMap();
 };
 $("hud-home").onclick = () => { sfx.pop(); if ("speechSynthesis" in window) speechSynthesis.cancel(); session = null; renderMap(); };
+$("btn-skip").onclick = () => {
+  if (!session) return;
+  sfx.pop();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  session.i++;
+  nextRound();
+};
 $("hud-shop").onclick = () => { sfx.pop(); session = null; renderShop(); };
 $("hud-sound").onclick = () => { S.muted = !S.muted; save(); renderHUD(); if (!S.muted) sfx.pop(); };
 renderHUD();
