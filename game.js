@@ -1,0 +1,625 @@
+/* WordCraft engine — vanilla JS, no build, no backend. */
+"use strict";
+
+// ---------- state ----------
+const SAVE_KEY = "wordcraft-save";
+const defaultState = () => ({
+  coins: 0,
+  xp: 0,
+  level: 1,
+  muted: false,
+  words: {},                 // word -> {c: correct, w: wrong}
+  zones: {},                 // zoneId -> {stars: [], boss: false}
+  gear: { owned: [], hat: null, eyes: null, hand: null },
+  seenHints: {},             // mechanic -> true once answered
+});
+let S = defaultState();
+try { S = Object.assign(defaultState(), JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
+const save = () => localStorage.setItem(SAVE_KEY, JSON.stringify(S));
+
+const $ = (id) => document.getElementById(id);
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const chunk = (a, n) => { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; };
+const wordStat = (w) => S.words[w] || { c: 0, w: 0 };
+const zoneState = (id) => S.zones[id] || (S.zones[id] = { stars: [], boss: false });
+
+const XP_PER_LEVEL = 50;
+
+// ---------- audio: TTS + synthesized SFX ----------
+let voice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
+  voice = vs.find((v) => /natural|google us/i.test(v.name)) || vs.find((v) => v.lang === "en-US") || vs[0] || null;
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+function speak(text, { rate = 0.85, onend } = {}) {
+  if (S.muted || !("speechSynthesis" in window)) { if (onend) setTimeout(onend, 600); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) u.voice = voice;
+  u.lang = "en-US";
+  u.rate = rate;
+  const mascots = document.querySelectorAll(".mascot");
+  mascots.forEach((m) => m.classList.add("talking"));
+  u.onend = u.onerror = () => {
+    mascots.forEach((m) => m.classList.remove("talking"));
+    if (onend) onend();
+  };
+  speechSynthesis.speak(u);
+}
+
+let AC = null;
+const audioCtx = () => (AC = AC || new (window.AudioContext || window.webkitAudioContext)());
+function tone(freq, start, dur, type = "square", vol = 0.12) {
+  if (S.muted) return;
+  const ctx = audioCtx();
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, ctx.currentTime + start);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+  o.connect(g).connect(ctx.destination);
+  o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur);
+}
+function noise(start, dur, vol = 0.2) {
+  if (S.muted) return;
+  const ctx = audioCtx();
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, ctx.currentTime + start);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+  src.connect(g).connect(ctx.destination);
+  src.start(ctx.currentTime + start);
+}
+const sfx = {
+  pop: () => tone(600, 0, 0.08, "sine", 0.15),
+  correct: () => { tone(523, 0, 0.12); tone(659, 0.1, 0.12); tone(784, 0.2, 0.2); },
+  wrong: () => { tone(300, 0, 0.15, "sawtooth", 0.08); tone(240, 0.13, 0.25, "sawtooth", 0.08); },
+  coin: () => { tone(988, 0, 0.07, "square", 0.1); tone(1319, 0.07, 0.18, "square", 0.1); },
+  crack: () => noise(0, 0.18, 0.25),
+  crowd: () => { noise(0, 1.1, 0.15); tone(880, 0, 0.4, "sine", 0.05); },
+  fanfare: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.14, 0.22)); },
+  hit: () => { noise(0, 0.12, 0.3); tone(150, 0, 0.2, "sawtooth", 0.15); },
+};
+
+// ---------- screens & HUD ----------
+const screens = ["screen-title", "screen-map", "screen-game", "screen-shop"];
+function show(id) {
+  screens.forEach((s) => $(s).classList.toggle("hidden", s !== id));
+  $("hud").classList.toggle("hidden", id === "screen-title");
+  if (id !== "screen-game") document.body.className = "";
+}
+function avatarHTML() {
+  const gear = (slot) => {
+    const g = GEAR.find((x) => x.id === S.gear[slot]);
+    return g ? `<span class="avatar-gear ${slot}">${g.emoji}</span>` : "";
+  };
+  return `<span class="av"><span class="avatar-base">😃</span>${gear("hat")}${gear("eyes")}${gear("hand")}</span>`;
+}
+function renderHUD() {
+  $("hud-coin-count").textContent = S.coins;
+  $("hud-level").textContent = S.level;
+  $("hud-xp-fill").style.width = `${((S.xp % XP_PER_LEVEL) / XP_PER_LEVEL) * 100}%`;
+  $("hud-avatar").innerHTML = avatarHTML();
+  $("hud-sound").textContent = S.muted ? "🔇" : "🔊";
+}
+
+// ---------- rewards & effects ----------
+function flyCoin(fromEl, n = 1) {
+  const from = fromEl.getBoundingClientRect();
+  const to = $("hud-coins").getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement("div");
+    c.className = "fly-coin";
+    c.textContent = "🪙";
+    c.style.left = `${from.left + from.width / 2}px`;
+    c.style.top = `${from.top + from.height / 2}px`;
+    document.body.appendChild(c);
+    requestAnimationFrame(() => {
+      c.style.transform = `translate(${to.left - from.left + i * 6}px, ${to.top - from.top}px) scale(.5)`;
+      c.style.opacity = "0";
+    });
+    setTimeout(() => c.remove(), 750);
+  }
+  setTimeout(() => {
+    sfx.coin();
+    $("hud-coins").classList.remove("bump");
+    void $("hud-coins").offsetWidth;
+    $("hud-coins").classList.add("bump");
+  }, 650);
+}
+function starBurst(el) {
+  const r = el.getBoundingClientRect();
+  for (let i = 0; i < 6; i++) {
+    const s = document.createElement("div");
+    s.className = "star-burst";
+    s.textContent = "⭐";
+    s.style.left = `${r.left + r.width / 2}px`;
+    s.style.top = `${r.top + r.height / 2}px`;
+    const ang = (i / 6) * Math.PI * 2;
+    s.style.setProperty("--cx", `${Math.cos(ang) * 90}px`);
+    s.style.setProperty("--cy", `${Math.sin(ang) * 90 - 40}px`);
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 750);
+  }
+}
+function confetti() {
+  const colors = ["#ffc93c", "#ff4fa3", "#6bc531", "#3fa9ff", "#fff"];
+  for (let i = 0; i < 28; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti-bit";
+    c.style.background = colors[i % colors.length];
+    c.style.left = `${Math.random() * 100}vw`;
+    c.style.top = "-20px";
+    c.style.setProperty("--cx", `${(Math.random() - 0.5) * 200}px`);
+    c.style.setProperty("--cy", `${60 + Math.random() * 40}vh`);
+    c.style.animationDelay = `${Math.random() * 0.4}s`;
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 2000);
+  }
+}
+function celebrate(html, ms, onDone) {
+  const el = $("celebrate");
+  el.innerHTML = html;
+  el.classList.remove("hidden");
+  confetti();
+  setTimeout(() => { el.classList.add("hidden"); if (onDone) onDone(); }, ms);
+}
+function reward(el, { coins = 2, xp = 5 } = {}) {
+  if (session && session.streak >= 3) coins *= 2;
+  S.coins += coins;
+  S.xp += xp;
+  const newLevel = Math.floor(S.xp / XP_PER_LEVEL) + 1;
+  flyCoin(el, Math.min(coins, 4));
+  starBurst(el);
+  sfx.correct();
+  document.querySelectorAll(".mascot").forEach((m) => {
+    m.classList.remove("happy"); void m.offsetWidth; m.classList.add("happy");
+  });
+  if (newLevel > S.level) {
+    S.level = newLevel;
+    S.coins += 25;
+    setTimeout(() => {
+      sfx.fanfare();
+      celebrate(`<div class="celebrate-big">🎉</div><div class="celebrate-text">LEVEL ${S.level}!</div><div class="celebrate-text">+ 25 🪙</div>`, 2200);
+      speak(`Level ${S.level}! Amazing!`);
+    }, 800);
+  }
+  save();
+  renderHUD();
+}
+
+// ---------- hint hand (English-only immersion: show, don't tell) ----------
+let hintTimer = null;
+function scheduleHint(mechanic, targetEl) {
+  clearHint();
+  if (S.seenHints[mechanic]) return;
+  hintTimer = setTimeout(() => {
+    const r = targetEl.getBoundingClientRect();
+    const hand = $("hint-hand");
+    hand.style.left = `${r.left + r.width / 2}px`;
+    hand.style.top = `${r.top + r.height / 2}px`;
+    hand.classList.remove("hidden");
+  }, 3500);
+}
+function clearHint() {
+  clearTimeout(hintTimer);
+  $("hint-hand").classList.add("hidden");
+}
+function hintDone(mechanic) {
+  clearHint();
+  S.seenHints[mechanic] = true;
+  save();
+}
+
+// ---------- world map ----------
+const LEVEL_SIZE = 4;
+function zoneUnlocked(i) { return i === 0 || zoneState(ZONES[i - 1].id).boss; }
+function renderMap() {
+  show("screen-map");
+  renderHUD();
+  const wrap = $("map-scroll");
+  wrap.innerHTML = "";
+  ZONES.forEach((zone, zi) => {
+    const zs = zoneState(zone.id);
+    const levels = chunk(zone.words, LEVEL_SIZE);
+    const unlocked = zoneUnlocked(zi);
+    const div = document.createElement("div");
+    div.className = `zone zone-${zone.id}${unlocked ? "" : " locked"}`;
+    div.innerHTML = `<h2>${zone.icon} ${zone.name}</h2><div class="node-path"></div>`;
+    const path = div.querySelector(".node-path");
+    let nextFound = false;
+    levels.forEach((words, li) => {
+      const stars = zs.stars[li] || 0;
+      const levelUnlocked = unlocked && (li === 0 || (zs.stars[li - 1] || 0) > 0);
+      const isNext = levelUnlocked && stars === 0 && !nextFound;
+      if (isNext) nextFound = true;
+      const row = document.createElement("div");
+      row.className = "node-row";
+      const btn = document.createElement("button");
+      btn.className = `map-node${stars ? " done" : ""}${isNext ? " next" : ""}${levelUnlocked ? "" : " locked-node"}`;
+      btn.innerHTML = `${stars ? words[0].emoji : levelUnlocked ? words[0].emoji : "🔒"}<span class="stars">${"⭐".repeat(stars)}</span>`;
+      btn.onclick = () => { sfx.pop(); startLevel(zone, li, words); };
+      row.appendChild(btn);
+      path.appendChild(row);
+    });
+    // boss node
+    const allDone = levels.every((_, li) => (zs.stars[li] || 0) > 0);
+    const row = document.createElement("div");
+    row.className = "node-row";
+    const btn = document.createElement("button");
+    btn.className = `map-node boss-node${zs.boss ? " done" : ""}${unlocked && allDone ? (zs.boss ? "" : " next") : " locked-node"}`;
+    btn.innerHTML = zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒";
+    btn.onclick = () => { sfx.pop(); startBoss(zone); };
+    row.appendChild(btn);
+    path.appendChild(row);
+    wrap.appendChild(div);
+  });
+}
+
+// ---------- session engine ----------
+let session = null;
+
+function startLevel(zone, levelIndex, words) {
+  const rounds = [];
+  words.forEach((w) => {
+    if (wordStat(w.word).c < 3) rounds.push({ type: "intro", word: w });
+    rounds.push({ type: "mine", word: w });
+  });
+  shuffle(words).forEach((w) => rounds.push({ type: "kick", word: w }));
+  shuffle(words).slice(0, 2).forEach((w) => rounds.push({ type: "build", word: w }));
+  rounds.push({ type: "echo", word: shuffle(words)[0] });
+  session = { zone, levelIndex, rounds, i: 0, mistakes: 0, streak: 0, boss: false, requeued: {} };
+  beginSession();
+}
+
+function startBoss(zone) {
+  const words = shuffle(zone.words.slice().sort((a, b) => (wordStat(a.word).c - wordStat(a.word).w) - (wordStat(b.word).c - wordStat(b.word).w)).slice(0, 8));
+  const types = ["mine", "kick", "build"];
+  const rounds = words.map((w, i) => ({ type: types[i % 3], word: w }));
+  session = { zone, rounds, i: 0, mistakes: 0, streak: 0, boss: true, bossHp: rounds.length, bossMax: rounds.length, requeued: {} };
+  beginSession();
+}
+
+function beginSession() {
+  show("screen-game");
+  document.body.className = `theme-${session.zone.id}`;
+  renderHUD();
+  nextRound();
+}
+
+function nextRound() {
+  clearHint();
+  const s = session;
+  $("round-progress-fill").style.width = `${(s.i / s.rounds.length) * 100}%`;
+  if (s.i >= s.rounds.length) return endSession();
+  const round = s.rounds[s.i];
+  const stage = $("stage");
+  stage.innerHTML = "";
+  stage.classList.toggle("on-fire", s.streak >= 3);
+  if (s.boss) {
+    const hearts = Array.from({ length: s.bossMax }, (_, i) => `<span class="${i < s.bossHp ? "" : "lost"}">❤️</span>`).join("");
+    stage.innerHTML = `<div class="boss-emoji" id="boss-emoji">${s.zone.boss.emoji}</div><div class="boss-hp">${hearts}</div>`;
+  }
+  const area = document.createElement("div");
+  area.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;";
+  stage.appendChild(area);
+  RENDER[round.type](round.word, area);
+}
+
+// called by every mechanic on answer
+function answered(round, ok, el) {
+  const s = session;
+  const st = S.words[round.word.word] || (S.words[round.word.word] = { c: 0, w: 0 });
+  if (ok) {
+    st.c++;
+    s.streak++;
+    hintDone(round.type);
+    reward(el);
+    if (s.boss) {
+      s.bossHp--;
+      const boss = $("boss-emoji");
+      if (boss) { boss.classList.add("hit"); sfx.hit(); }
+    }
+    s.i++;
+    setTimeout(nextRound, 1100);
+  } else {
+    st.w++;
+    s.streak = 0;
+    s.mistakes++;
+    sfx.wrong();
+    // requeue this word+type once at the end (invisible spaced repetition)
+    const key = round.type + round.word.word;
+    if (!s.requeued[key]) {
+      s.requeued[key] = true;
+      s.rounds.push({ type: round.type, word: round.word });
+    }
+  }
+  save();
+}
+
+function endSession() {
+  const s = session;
+  const zs = zoneState(s.zone.id);
+  if (s.boss) {
+    zs.boss = true;
+    S.coins += 50;
+    save();
+    sfx.fanfare();
+    celebrate(`<div class="celebrate-big">🏆</div><div class="celebrate-text">${s.zone.name} CHAMPION!</div><div class="celebrate-text">+ 50 🪙</div>`, 3000, renderMap);
+    speak("You are the champion! Incredible!");
+  } else {
+    const stars = s.mistakes === 0 ? 3 : s.mistakes <= 2 ? 2 : 1;
+    zs.stars[s.levelIndex] = Math.max(zs.stars[s.levelIndex] || 0, stars);
+    S.coins += stars * 5;
+    save();
+    sfx.fanfare();
+    const starHTML = Array.from({ length: 3 }, (_, i) => `<span>${i < stars ? "⭐" : "☆"}</span>`).join("");
+    celebrate(`<div class="celebrate-big">🎉</div><div class="celebrate-stars">${starHTML}</div><div class="celebrate-text">+ ${stars * 5} 🪙</div>`, 2800, renderMap);
+    speak(stars === 3 ? "Perfect! Three stars!" : "Great job!");
+  }
+  session = null;
+}
+
+// ---------- mechanics ----------
+function speakBtn(word) {
+  const b = document.createElement("button");
+  b.className = "block-btn speak-btn";
+  b.textContent = "🔊";
+  b.onclick = () => { sfx.pop(); speak(word); };
+  return b;
+}
+function distractors(word, zone, n) {
+  return shuffle(zone.words.filter((w) => w.word !== word.word)).slice(0, n);
+}
+
+const RENDER = {
+  // hear it, see it — auto-advances
+  intro(word, area) {
+    area.innerHTML = `<div class="intro-card"><div class="big-emoji">${word.emoji}</div><div class="word-label">${word.word.toUpperCase()}</div></div>`;
+    setTimeout(() => speak(word.word, {
+      onend: () => setTimeout(() => speak(word.word, {
+        onend: () => setTimeout(() => { session.i++; nextRound(); }, 500),
+      }), 400),
+    }), 350);
+  },
+
+  // hear the word, tap the right falling block
+  mine(word, area) {
+    const round = { type: "mine", word };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    const row = document.createElement("div");
+    row.className = "mine-row";
+    let done = false;
+    options.forEach((opt) => {
+      const b = document.createElement("button");
+      b.className = "mine-block";
+      b.textContent = opt.emoji;
+      b.onclick = () => {
+        if (done) return;
+        if (opt.word === word.word) {
+          done = true;
+          b.classList.add("crack");
+          sfx.crack();
+          answered(round, true, b);
+        } else {
+          b.classList.remove("nope"); void b.offsetWidth; b.classList.add("nope");
+          answered(round, false, b);
+          row.querySelectorAll(".mine-block").forEach((x) => {
+            if (x.textContent === word.emoji) x.classList.add("hint");
+          });
+          speak(word.word);
+        }
+      };
+      row.appendChild(b);
+    });
+    area.appendChild(speakBtn(word.word));
+    area.appendChild(row);
+    setTimeout(() => speak(word.word), 700);
+    const target = [...row.children][options.findIndex((o) => o.word === word.word)];
+    scheduleHint("mine", target);
+  },
+
+  // see the picture, shoot the ball at the right written word
+  kick(word, area) {
+    const round = { type: "kick", word };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    area.innerHTML = `<div class="kick-prompt">${word.emoji}</div>`;
+    const goals = document.createElement("div");
+    goals.className = "kick-goals";
+    const ball = document.createElement("div");
+    ball.id = "kick-ball";
+    ball.textContent = "⚽";
+    let done = false;
+    options.forEach((opt) => {
+      const g = document.createElement("div");
+      g.className = "kick-goal";
+      g.setAttribute("role", "button");
+      g.setAttribute("tabindex", "0");
+      g.innerHTML = `<div class="net"></div><div class="goal-word">${opt.word.toUpperCase()}</div>`;
+      const shoot = () => {
+        if (done) return;
+        const gr = g.getBoundingClientRect(), br = ball.getBoundingClientRect();
+        ball.style.transform = `translate(${gr.left + gr.width / 2 - br.left - br.width / 2}px, ${gr.top - br.top}px) rotate(720deg) scale(.7)`;
+        setTimeout(() => {
+          if (opt.word === word.word) {
+            done = true;
+            g.classList.add("score");
+            sfx.crowd();
+            speak(`${word.word}! Goal!`);
+            answered(round, true, g);
+          } else {
+            g.classList.add("nope");
+            answered(round, false, g);
+            setTimeout(() => { ball.style.transform = ""; g.classList.remove("nope"); }, 600);
+            speak(word.word);
+          }
+        }, 480);
+      };
+      g.onclick = shoot;
+      g.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") shoot(); };
+      goals.appendChild(g);
+    });
+    area.appendChild(goals);
+    area.appendChild(ball);
+    setTimeout(() => speak(word.word), 600);
+    const target = [...goals.children][options.findIndex((o) => o.word === word.word)];
+    scheduleHint("kick", target);
+  },
+
+  // hear the word, tap letter blocks in order to spell it
+  build(word, area) {
+    const round = { type: "build", word };
+    const letters = word.word.toUpperCase().split("");
+    const slots = document.createElement("div");
+    slots.className = "build-slots";
+    letters.forEach(() => {
+      const sl = document.createElement("div");
+      sl.className = "build-slot";
+      slots.appendChild(sl);
+    });
+    const pool = document.createElement("div");
+    pool.className = "letter-pool";
+    let idx = 0;
+    shuffle(letters.map((ch, i) => ({ ch, i }))).forEach((t) => {
+      const b = document.createElement("button");
+      b.className = "letter-tile";
+      b.textContent = t.ch;
+      b.onclick = () => {
+        if (b.classList.contains("used")) return;
+        if (t.ch === letters[idx]) {
+          b.classList.add("used");
+          const sl = slots.children[idx];
+          sl.textContent = t.ch;
+          sl.classList.add("filled");
+          sfx.pop();
+          speak(t.ch, { rate: 0.9 });
+          idx++;
+          if (idx === letters.length) {
+            hintDone("build");
+            setTimeout(() => {
+              speak(word.word + "!", { rate: 0.8 });
+              addBuiltWord(word);
+              answered(round, true, slots);
+            }, 500);
+          }
+        } else {
+          b.classList.remove("nope"); void b.offsetWidth; b.classList.add("nope");
+          sfx.wrong();
+          // gentle: wrong letters don't count as a round mistake, just wobble
+        }
+      };
+      pool.appendChild(b);
+    });
+    area.appendChild(speakBtn(word.word));
+    area.appendChild(document.createElement("div")).innerHTML = `<div style="font-size:3.4rem;line-height:1.1">${word.emoji}</div>`;
+    area.appendChild(slots);
+    area.appendChild(pool);
+    area.appendChild(builtRow());
+    setTimeout(() => speak(word.word), 600);
+    const firstTile = [...pool.children].find((b) => b.textContent === letters[0]);
+    scheduleHint("build", firstTile);
+  },
+
+  // hear it, say it back
+  echo(word, area) {
+    const round = { type: "echo", word };
+    area.innerHTML = `<div style="font-size:4.5rem;line-height:1.1">${word.emoji}</div><div class="echo-word">${word.word.toUpperCase()}</div>`;
+    const mic = document.createElement("button");
+    mic.className = "block-btn mic-btn";
+    mic.textContent = "🎤";
+    let tries = 0;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const succeed = () => {
+      hintDone("echo");
+      mic.classList.remove("listening");
+      speak("Yes! " + word.word + "!");
+      answered(round, true, mic);
+    };
+    mic.onclick = () => {
+      sfx.pop();
+      mic.classList.add("listening");
+      if (!SR) { // no mic support: he says it out loud, mascot cheers
+        setTimeout(succeed, 2500);
+        return;
+      }
+      const r = new SR();
+      r.lang = "en-US";
+      r.onresult = (e) => {
+        const heard = e.results[0][0].transcript.toLowerCase();
+        if (heard.includes(word.word) || ++tries >= 2) succeed();
+        else { mic.classList.remove("listening"); sfx.wrong(); speak(word.word); }
+      };
+      r.onerror = r.onnomatch = () => { if (++tries >= 2) succeed(); else { mic.classList.remove("listening"); speak(word.word); } };
+      try { r.start(); } catch (e) { setTimeout(succeed, 2500); }
+    };
+    area.appendChild(mic);
+    setTimeout(() => speak(word.word), 500);
+    scheduleHint("echo", mic);
+  },
+};
+
+// words built this session stack up into a little wall
+let builtWords = [];
+function builtRow() {
+  const div = document.createElement("div");
+  div.className = "built-row";
+  div.id = "built-row";
+  div.innerHTML = builtWords.map((w) => `<span class="built-word">${w.emoji} ${w.word.toUpperCase()}</span>`).join("");
+  return div;
+}
+function addBuiltWord(word) {
+  builtWords.push(word);
+  const row = $("built-row");
+  if (row) row.innerHTML = builtWords.map((w) => `<span class="built-word">${w.emoji} ${w.word.toUpperCase()}</span>`).join("");
+}
+
+// ---------- shop ----------
+function renderShop() {
+  show("screen-shop");
+  renderHUD();
+  $("shop-avatar").innerHTML = avatarHTML();
+  const grid = $("shop-items");
+  grid.innerHTML = "";
+  GEAR.forEach((g) => {
+    const owned = S.gear.owned.includes(g.id);
+    const equipped = S.gear[g.slot] === g.id;
+    const canBuy = S.coins >= g.price;
+    const b = document.createElement("button");
+    b.className = `block-btn shop-item${owned ? " owned" : ""}${equipped ? " equipped" : ""}${!owned && !canBuy ? " cant" : ""}`;
+    b.innerHTML = `${g.emoji}<span class="price">${owned ? (equipped ? "✔" : "···") : `${g.price} 🪙`}</span>`;
+    b.onclick = () => {
+      if (!owned) {
+        if (!canBuy) { sfx.wrong(); return; }
+        S.coins -= g.price;
+        S.gear.owned.push(g.id);
+        S.gear[g.slot] = g.id;
+        sfx.fanfare();
+        confetti();
+      } else {
+        S.gear[g.slot] = equipped ? null : g.id; // tap to equip/unequip
+        sfx.pop();
+      }
+      save();
+      renderShop();
+    };
+    grid.appendChild(b);
+  });
+}
+
+// ---------- boot ----------
+$("btn-play").onclick = () => {
+  audioCtx(); // unlock audio on the user gesture
+  sfx.fanfare();
+  speak("Let's play WordCraft!");
+  renderMap();
+};
+$("hud-home").onclick = () => { sfx.pop(); if ("speechSynthesis" in window) speechSynthesis.cancel(); session = null; renderMap(); };
+$("hud-shop").onclick = () => { sfx.pop(); session = null; renderShop(); };
+$("hud-sound").onclick = () => { S.muted = !S.muted; save(); renderHUD(); if (!S.muted) sfx.pop(); };
+renderHUD();
