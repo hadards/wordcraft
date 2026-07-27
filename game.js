@@ -268,47 +268,139 @@ function hintDone(mechanic) {
 
 // ---------- world map ----------
 const LEVEL_SIZE = 4;
+const NODE_POS = [[26, 26], [71, 42], [27, 62], [68, 84]]; // 3 levels + boss, zigzag
+const MASCOT_HTML = `<div class="mascot-body"><div class="mascot-eyes"><i></i><i></i></div><div class="mascot-mouth"></div></div>`;
+const DECOR = {
+  meadow: [
+    { e: "☀️", x: 6, y: 8, c: "d-sway", s: 3 },
+    { e: "☁️", x: 0, y: 15, c: "d-drift", s: 2.6 },
+    { e: "🦋", x: 55, y: 30, c: "d-float", s: 1.6 },
+    { e: "🐝", x: 42, y: 50, c: "d-float", s: 1.3 },
+    { e: "🌸", x: 8, y: 80, c: "d-sway", s: 1.8 },
+    { e: "🌻", x: 88, y: 54, c: "d-sway", s: 2 },
+  ],
+  biome: [
+    { e: "🦇", x: 0, y: 12, c: "d-drift", s: 1.7 },
+    { e: "💎", x: 8, y: 32, c: "d-sparkle", s: 1.7 },
+    { e: "🪙", x: 86, y: 22, c: "d-sparkle", s: 1.5 },
+    { e: "✨", x: 48, y: 14, c: "d-sparkle", s: 1.4 },
+    { e: "⛏️", x: 6, y: 58, c: "d-sway", s: 1.8 },
+    { e: "🪨", x: 88, y: 68, c: "d-sway", s: 2 },
+  ],
+  stadium: [
+    { b: "beam left" },
+    { b: "beam right" },
+    { e: "⚽", x: 88, y: 14, c: "d-float", s: 1.8 },
+    { e: "🚩", x: 6, y: 38, c: "d-sway", s: 1.8 },
+    { e: "🏆", x: 87, y: 74, c: "d-sparkle", s: 1.9 },
+  ],
+  ocean: [
+    { e: "🐠", x: 8, y: 20, c: "d-swim", s: 1.8 },
+    { e: "🐟", x: 30, y: 48, c: "d-swim", s: 1.5 },
+    { e: "🪼", x: 82, y: 30, c: "d-float", s: 1.8 },
+    { e: "🫧", x: 70, y: 72, c: "d-bubble", s: 1.5 },
+    { e: "🫧", x: 20, y: 84, c: "d-bubble", s: 1.1 },
+    { e: "🌿", x: 90, y: 88, c: "d-sway", s: 2.2 },
+    { e: "🦀", x: 8, y: 90, c: "d-sway", s: 1.7 },
+  ],
+  arcade: [
+    { e: "👾", x: 10, y: 22, c: "d-float", s: 2 },
+    { e: "🕹️", x: 86, y: 38, c: "d-sway", s: 1.9 },
+    { e: "🌟", x: 50, y: 13, c: "d-sparkle", s: 1.6 },
+    { e: "🎲", x: 8, y: 66, c: "d-float", s: 1.7 },
+    { e: "✨", x: 90, y: 78, c: "d-sparkle", s: 1.4 },
+  ],
+};
+
 function zoneUnlocked(i) { return i === 0 || zoneState(ZONES[i - 1].id).boss; }
+
+function pathThrough(pts) {
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const my = (y0 + y1) / 2;
+    d += ` C ${pts[i - 1][0]} ${my}, ${x1} ${my}, ${x1} ${y1}`;
+  }
+  return d;
+}
+
 function renderMap() {
   show("screen-map");
   renderHUD();
   const wrap = $("map-scroll");
   wrap.innerHTML = "";
+  const world = document.createElement("div");
+  world.id = "map-world";
+  let scrollTarget = null;
   ZONES.forEach((zone, zi) => {
     const zs = zoneState(zone.id);
     const levels = chunk(zone.words, LEVEL_SIZE);
     const unlocked = zoneUnlocked(zi);
-    const div = document.createElement("div");
-    div.className = `zone zone-${zone.id}${unlocked ? "" : " locked"}`;
-    div.innerHTML = `<h2>${zone.icon} ${zone.name}</h2><div class="node-path"></div>`;
-    const path = div.querySelector(".node-path");
+    const z = document.createElement("div");
+    z.className = `zone zone-${zone.id}${unlocked ? "" : " locked"}`;
+    const inner = document.createElement("div");
+    inner.className = "zone-inner";
+    inner.innerHTML = `<div class="zone-banner">${zone.icon} ${zone.name}</div>`;
+    (DECOR[zone.id] || []).forEach((d) => {
+      const el = document.createElement("div");
+      if (d.b) { el.className = d.b; }
+      else {
+        el.className = `decor ${d.c}`;
+        el.textContent = d.e;
+        el.style.left = `${d.x}%`;
+        el.style.top = `${d.y}%`;
+        el.style.fontSize = `${d.s}rem`;
+        el.style.animationDelay = `${(d.x + d.y) % 4}s`;
+      }
+      inner.appendChild(el);
+    });
+    const pts = NODE_POS.slice(0, levels.length + 1);
+    inner.insertAdjacentHTML("beforeend",
+      `<svg class="map-path" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${pathThrough(pts)}"/></svg>`);
+    const addNode = (x, y, cls, html, onclick) => {
+      const w = document.createElement("div");
+      w.className = "node-wrap";
+      w.style.left = `${x}%`;
+      w.style.top = `${y}%`;
+      const b = document.createElement("button");
+      b.className = `map-node ${cls}`;
+      b.innerHTML = html;
+      b.onclick = onclick;
+      w.appendChild(b);
+      inner.appendChild(w);
+      return b;
+    };
     let nextFound = false;
     levels.forEach((words, li) => {
       const stars = zs.stars[li] || 0;
       const levelUnlocked = unlocked && (li === 0 || (zs.stars[li - 1] || 0) > 0);
       const isNext = levelUnlocked && stars === 0 && !nextFound;
       if (isNext) nextFound = true;
-      const row = document.createElement("div");
-      row.className = "node-row";
-      const btn = document.createElement("button");
-      btn.className = `map-node${stars ? " done" : ""}${isNext ? " next" : ""}${levelUnlocked ? "" : " locked-node"}`;
-      btn.innerHTML = `${stars ? words[0].emoji : levelUnlocked ? words[0].emoji : "🔒"}<span class="stars">${"⭐".repeat(stars)}</span>`;
-      btn.onclick = () => { sfx.pop(); startLevel(zone, li, words); };
-      row.appendChild(btn);
-      path.appendChild(row);
+      const btn = addNode(pts[li][0], pts[li][1],
+        `${stars ? "done" : ""}${isNext ? " next" : ""}${levelUnlocked ? "" : " locked-node"}`,
+        `${levelUnlocked ? words[0].emoji : "🔒"}<span class="stars">${"⭐".repeat(stars)}</span>`,
+        () => { sfx.pop(); startLevel(zone, li, words); });
+      if (isNext) {
+        btn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
+        scrollTarget = btn;
+      }
     });
-    // boss node
     const allDone = levels.every((_, li) => (zs.stars[li] || 0) > 0);
-    const row = document.createElement("div");
-    row.className = "node-row";
-    const btn = document.createElement("button");
-    btn.className = `map-node boss-node${zs.boss ? " done" : ""}${unlocked && allDone ? (zs.boss ? "" : " next") : " locked-node"}`;
-    btn.innerHTML = zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒";
-    btn.onclick = () => { sfx.pop(); startBoss(zone); };
-    row.appendChild(btn);
-    path.appendChild(row);
-    wrap.appendChild(div);
+    const bossNext = unlocked && allDone && !zs.boss;
+    const [bx, by] = pts[levels.length];
+    const bossBtn = addNode(bx, by,
+      `boss-node ${zs.boss ? "done" : ""}${bossNext ? " next" : ""}${unlocked && allDone ? "" : " locked-node"}`,
+      zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒",
+      () => { sfx.pop(); startBoss(zone); });
+    if (bossNext) {
+      bossBtn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
+      scrollTarget = bossBtn;
+    }
+    z.appendChild(inner);
+    world.appendChild(z);
   });
+  wrap.appendChild(world);
+  if (scrollTarget) scrollTarget.scrollIntoView({ block: "center" });
 }
 
 // ---------- session engine ----------
