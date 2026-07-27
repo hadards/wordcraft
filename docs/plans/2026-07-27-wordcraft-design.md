@@ -1,0 +1,71 @@
+# WordCraft — English learning game design
+
+A browser game for a 7-year-old with zero English. Minecraft/Roblox/football themed.
+English-only immersion: the game never relies on reading instructions — the mascot
+demonstrates everything.
+
+## Decisions (validated in brainstorming)
+
+- **Platform:** static web app, zero-build vanilla HTML/CSS/JS. No backend, no accounts.
+- **Devices:** touch and mouse both first-class. Big targets (min 64px).
+- **Audio:** full — every word spoken via `speechSynthesis` (en-US, rate ~0.85).
+  Sound effects synthesized with Web Audio API. No audio files.
+- **Artwork:** emoji + pure CSS (mascot, map, blocks, boss). No image assets.
+- **UI language:** English-only immersion. Mascot demos each new game type by
+  playing a round itself with a pointing hand.
+- **Progress:** one localStorage JSON blob — coins, XP, per-word stats
+  (drives invisible spaced repetition), unlocked zones, avatar gear.
+
+## Structure
+
+Home screen = scrolling world map (Candy Crush style): winding path of level
+nodes through four zones, locked zones visible but fogged.
+
+1. Starter Meadow — colors, numbers 1–10, animals, family
+2. Blocky Biome (Minecraft-flavored) — diamond, pickaxe, sword, house, tree…
+3. Stadium Zone (football) — ball, goal, team, kick, win…
+4. Arcade Zone (Roblox-flavored) — play, jump, build, friend, avatar…
+
+Each level node = one ~2–3 minute session of ~6 rounds. New words introduced
+first (hear 2× + picture), then played.
+
+## Mini-games
+
+1. **Mine the Word** (listening) — word spoken; 3 picture blocks drop; tap the
+   right one, it cracks and drops a coin. Wrong wobbles; right one pulses as hint.
+2. **Penalty Kick** (reading) — picture shown; three goals labeled with written
+   words; flick the ball at the right one. Net ripple + crowd roar.
+3. **Build the Word** (writing) — tap/drag letter blocks into slots to spell the
+   word he hears. Each letter speaks its phonic sound. Built words stack into a
+   growing structure.
+4. **Echo Cave** (speaking) — mascot says word, he repeats into mic.
+   `webkitSpeechRecognition` where available, generous matching; no mic support
+   → mascot just cheers after he speaks.
+5. **Boss Round** — end of each zone, all mechanics mixed; correct answers land
+   cartoon hits. Beat it → trophy + coin bonus.
+
+No lives, no game over. Missed words silently re-queued later in the session
+(spaced repetition, invisible).
+
+## Juice / retention
+
+- Every tap: squash/pop animation + synthesized sound.
+- Correct: star burst, coin flies to counter, XP bar fill.
+- 3-streak: "ON FIRE" screen glow.
+- Level-up: full-screen celebration.
+- Shop: spend coins on avatar gear (emoji hats, capes, boots, swords).
+
+## Files
+
+```
+wordcraft/
+  index.html   – shell + screens
+  style.css    – all visuals/animations
+  game.js      – engine, screens, mechanics
+  words.js     – content; one line per word: { word, emoji, zone }
+```
+
+## Skipped (add only when actually needed)
+
+Backend/sync, accounts, analytics, real TTS API, image assets, build tooling,
+Hebrew UI, alphabet/phonics track (phonics sneaks in via Build the Word).
