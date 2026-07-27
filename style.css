@@ -837,6 +837,181 @@ body.theme-stadium .build-slot, body.theme-arcade .build-slot { border-color: rg
   .mascot.corner { display: none; }
 }
 
+/* ============ KEEN SKIN: EGA-era pixel chrome over the colorful worlds ============ */
+:root { --font-pixel: "Press Start 2P", monospace; --panel: #a8b0c0; --panel-hi: #dde3ee; --panel-lo: #5c6578; }
+
+/* subtle CRT scanlines over everything */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 998;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.03) 0 2px, transparent 2px 4px);
+}
+
+/* chunky pixel buttons: notched corners + hard bevel, no rounding */
+.block-btn, .letter-tile, .word-tag, .shop-item, .zone-banner, .intro-card {
+  border-radius: 0 !important;
+}
+.block-btn {
+  border: none;
+  box-shadow:
+    -4px 0 0 0 #3d3528, 4px 0 0 0 #3d3528, 0 -4px 0 0 #3d3528, 0 4px 0 0 #3d3528,
+    inset 0 5px 0 rgba(255,255,255,.4), inset 0 -5px 0 rgba(0,0,0,.22),
+    0 8px 0 rgba(0,0,0,.3);
+}
+.block-btn:active, .block-btn.pressed {
+  box-shadow:
+    -4px 0 0 0 #3d3528, 4px 0 0 0 #3d3528, 0 -4px 0 0 #3d3528, 0 4px 0 0 #3d3528,
+    inset 0 5px 0 rgba(0,0,0,.15), inset 0 -5px 0 rgba(255,255,255,.2),
+    0 2px 0 rgba(0,0,0,.3);
+}
+.speak-btn, .mic-btn { border-radius: 0 !important; border: none; }
+.letter-tile {
+  border: none;
+  box-shadow:
+    -4px 0 0 0 #6b4a08, 4px 0 0 0 #6b4a08, 0 -4px 0 0 #6b4a08, 0 4px 0 0 #6b4a08,
+    inset 0 4px 0 rgba(255,255,255,.45), inset 0 -4px 0 rgba(0,0,0,.25),
+    0 6px 0 rgba(0,0,0,.3);
+}
+.word-tag { border: 3px solid var(--ink); box-shadow: inset 0 3px 0 rgba(255,255,255,.6), 0 4px 0 rgba(0,0,0,.3); }
+
+/* Keen status panel HUD */
+#hud {
+  background: var(--panel);
+  border-bottom: none;
+  box-shadow: inset 0 4px 0 var(--panel-hi), inset 0 -4px 0 var(--panel-lo);
+}
+#hud .block-btn.small { font-size: 1.1rem; }
+#hud-coins {
+  font-family: var(--font-pixel);
+  font-size: .95rem;
+  background: #10142a;
+  color: #ffd23e;
+  border: none;
+  border-radius: 0;
+  padding: 8px 14px 8px 10px;
+  box-shadow: inset 0 3px 0 rgba(0,0,0,.6), inset 0 -2px 0 rgba(255,255,255,.12);
+}
+#hud-xp { border-radius: 0; border: 3px solid var(--panel-lo); background: #10142a; }
+#hud-xp-fill { border-radius: 0; background: linear-gradient(90deg, #38d973, #1fa851); }
+#hud-level {
+  font-family: var(--font-pixel);
+  font-size: .8rem;
+  border-radius: 0;
+  background: #e8402a;
+  border-color: var(--panel-hi);
+  box-shadow: 0 3px 0 #8f1d0e;
+}
+
+/* pixel-tile map nodes (Keen level entrances) */
+.map-node {
+  border-radius: 0;
+  border: none;
+  background: linear-gradient(#fffef7, #ecd9a0);
+  box-shadow:
+    -5px 0 0 0 #3d3528, 5px 0 0 0 #3d3528, 0 -5px 0 0 #3d3528, 0 5px 0 0 #3d3528,
+    inset 0 5px 0 rgba(255,255,255,.55), inset 0 -5px 0 rgba(0,0,0,.18),
+    0 9px 0 rgba(0,0,0,.35);
+}
+.map-node.done { background: linear-gradient(#f0ffe4, #9fdc74); }
+.map-node.boss-node { background: linear-gradient(#fff0f7, #ffb7d9); box-shadow:
+  -5px 0 0 0 #7a5a00, 5px 0 0 0 #7a5a00, 0 -5px 0 0 #7a5a00, 0 5px 0 0 #7a5a00,
+  inset 0 5px 0 rgba(255,255,255,.55), inset 0 -5px 0 rgba(0,0,0,.18),
+  0 9px 0 rgba(0,0,0,.35), 0 0 0 5px var(--gold); }
+@keyframes node-pulse {
+  0%,100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.06); filter: brightness(1.18); }
+}
+.zone-banner {
+  font-family: var(--font-pixel);
+  font-size: clamp(.65rem, 2.8vw, .85rem);
+  padding: 12px 20px;
+  background: #10142a;
+  border: none;
+  box-shadow: -4px 0 0 0 #fff, 4px 0 0 0 #fff, 0 -4px 0 0 #fff, 0 4px 0 0 #fff, 0 8px 0 rgba(0,0,0,.35);
+  letter-spacing: .05em;
+}
+
+/* pixel terrain strips + stage ground */
+.terrain {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 34px;
+  z-index: 1;
+  background-image: conic-gradient(var(--t1) 25%, var(--t2) 0 50%, var(--t1) 0 75%, var(--t2) 0);
+  background-size: 16px 16px;
+  border-top: 4px solid rgba(0,0,0,.35);
+}
+.zone-meadow .terrain  { --t1: #4e9a22; --t2: #42901e; }
+.zone-biome .terrain   { --t1: #6b421c; --t2: #5d3916; }
+.zone-stadium .terrain { --t1: #22304f; --t2: #1c2843; }
+.zone-ocean .terrain   { --t1: #08466e; --t2: #063a5e; }
+.zone-arcade .terrain  { --t1: #2a1b54; --t2: #231647; }
+.zone-brainrot .terrain{ --t1: #7a1f4e; --t2: #6b1a44; }
+#stage-ground {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 44px;
+  z-index: 5;
+  background-image: conic-gradient(var(--t1, #4e9a22) 25%, var(--t2, #42901e) 0 50%, var(--t1, #4e9a22) 0 75%, var(--t2, #42901e) 0);
+  background-size: 16px 16px;
+  border-top: 4px solid rgba(0,0,0,.35);
+}
+body.theme-meadow #stage-ground  { --t1: #4e9a22; --t2: #42901e; }
+body.theme-biome #stage-ground   { --t1: #6b421c; --t2: #5d3916; }
+body.theme-stadium #stage-ground { --t1: #22304f; --t2: #1c2843; }
+body.theme-ocean #stage-ground   { --t1: #08466e; --t2: #063a5e; }
+body.theme-arcade #stage-ground  { --t1: #2a1b54; --t2: #231647; }
+body.theme-brainrot #stage-ground{ --t1: #7a1f4e; --t2: #6b1a44; }
+#stage { padding-bottom: 56px; }
+.mascot.corner { bottom: 50px; }
+
+/* the pixel kid (helmet + sneakers, pure box-shadow art) */
+.pixel-kid { position: relative; width: 40px; height: 56px; image-rendering: pixelated; }
+.pixel-kid i { position: absolute; top: 0; left: 0; width: 4px; height: 4px; }
+.mascot-body.as-kid {
+  width: auto; height: auto;
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.mascot.big { transform: scale(2.3); transform-origin: center; margin: 45px 0 75px; }
+.node-mascot { transform: translateX(-50%); top: -64px; }
+.kid-jump { animation: kid-jump .5s cubic-bezier(.3,0,.4,1); }
+@keyframes kid-jump { 30% { transform: translateY(-30px) scale(1.05, .95); } 60% { transform: translateY(-30px); } }
+
+/* Pogo Jump (Brainrot Land signature game) */
+.pogo-arena {
+  position: relative;
+  width: min(92vw, 560px);
+  height: min(52vh, 380px);
+}
+.platform {
+  position: absolute;
+  padding: 10px 20px 14px;
+  border: none;
+  cursor: pointer;
+  background-image: conic-gradient(#8a5a2a 25%, #7a4e22 0 50%, #8a5a2a 0 75%, #7a4e22 0);
+  background-size: 14px 14px;
+  box-shadow:
+    -4px 0 0 0 #3d2a10, 4px 0 0 0 #3d2a10, 0 -4px 0 0 #3d2a10, 0 4px 0 0 #3d2a10,
+    inset 0 4px 0 rgba(255,255,255,.25), 0 7px 0 rgba(0,0,0,.35);
+  transition: transform .08s;
+}
+.platform:active { transform: translateY(3px); }
+.pogo-kid { position: absolute; bottom: 4px; left: 50%; margin-left: -20px; z-index: 3; }
+
+/* pixel font accents elsewhere */
+#build-tag, .shop-title { font-family: var(--font-pixel); font-size: .75rem; }
+.shop-title { padding: 10px; }
+#celebrate .celebrate-text { font-family: var(--font-pixel); font-size: clamp(.9rem, 4vw, 1.5rem); line-height: 1.6; }
+#round-progress { border-radius: 0; border: 3px solid rgba(0,0,0,.3); }
+#round-progress-fill { border-radius: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01s !important; transition-duration: .01s !important; }
 }

@@ -87,6 +87,18 @@ const sfx = {
   crowd: () => { noise(0, 1.1, 0.15); tone(880, 0, 0.4, "sine", 0.05); },
   fanfare: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.14, 0.22)); },
   hit: () => { noise(0, 0.12, 0.3); tone(150, 0, 0.2, "sawtooth", 0.15); },
+  boing: () => {
+    if (S.muted) return;
+    const ctx = audioCtx();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(160, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(650, ctx.currentTime + 0.22);
+    g.gain.setValueAtTime(0.1, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+    o.connect(g).connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.3);
+  },
 };
 
 // ---------- screens & HUD ----------
@@ -270,7 +282,29 @@ function hintDone(mechanic) {
 // ---------- world map ----------
 const LEVEL_SIZE = 4;
 const NODE_POS = [[26, 26], [71, 42], [27, 62], [68, 84]]; // 3 levels + boss, zigzag
-const MASCOT_HTML = `<div class="mascot-body"><div class="mascot-eyes"><i></i><i></i></div><div class="mascot-mouth"></div></div>`;
+// pixel kid sprite (yellow helmet, red sneakers) drawn as box-shadow art
+const KID_ART = [
+  "..YYYYYY..",
+  ".YYYYYYYY.",
+  ".YYYYYYYY.",
+  ".yFFFFFFy.",
+  ".yFEFFEFy.",
+  ".yFFFFFFy.",
+  "..FFMMFF..",
+  "..BBBBBB..",
+  ".BBBBBBBB.",
+  ".bBBBBBBb.",
+  "..PPPPPP..",
+  "..PP..PP..",
+  "..PP..PP..",
+  ".SS....SS.",
+];
+const KID_COLORS = { Y: "#ffd23e", y: "#c98f12", F: "#ffc9a3", E: "#22304f", M: "#c0653a", B: "#3a7bf0", b: "#2c5cc0", P: "#2b3f72", S: "#e8402a" };
+const KID_SHADOWS = KID_ART.flatMap((row, y) =>
+  [...row].map((ch, x) => (KID_COLORS[ch] ? `${x * 4}px ${y * 4}px 0 0 ${KID_COLORS[ch]}` : null)).filter(Boolean)
+).join(",");
+const kidHTML = () => `<div class="pixel-kid"><i style="box-shadow:${KID_SHADOWS}"></i></div>`;
+const MASCOT_HTML = `<div class="mascot-body as-kid">${kidHTML()}</div>`;
 const DECOR = {
   meadow: [
     { e: "☀️", x: 6, y: 8, c: "d-sway", s: 3 },
@@ -324,6 +358,23 @@ const DECOR = {
 
 function zoneUnlocked(i) { return i === 0 || zoneState(ZONES[i - 1].id).boss; }
 
+// walk the pixel kid across the map to the tapped node, then start (Keen overworld feel)
+function walkThen(targetBtn, fn) {
+  const kid = document.querySelector(".node-mascot");
+  if (!kid) return fn();
+  const kr = kid.getBoundingClientRect(), tr = targetBtn.getBoundingClientRect();
+  const dx = tr.left + tr.width / 2 - (kr.left + kr.width / 2);
+  const dy = tr.top - kr.top;
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return fn();
+  sfx.boing();
+  kid.animate([
+    { transform: "translateX(-50%)" },
+    { transform: `translate(calc(-50% + ${dx / 2}px), ${dy / 2 - 46}px)`, offset: 0.5 },
+    { transform: `translate(calc(-50% + ${dx}px), ${dy}px)` },
+  ], { duration: 650, easing: "ease-in-out", fill: "forwards" });
+  setTimeout(fn, 700);
+}
+
 function pathThrough(pts) {
   let d = `M ${pts[0][0]} ${pts[0][1]}`;
   for (let i = 1; i < pts.length; i++) {
@@ -375,7 +426,7 @@ function renderMap() {
       const b = document.createElement("button");
       b.className = `map-node ${cls}`;
       b.innerHTML = html;
-      b.onclick = onclick;
+      b.onclick = () => onclick(b);
       w.appendChild(b);
       inner.appendChild(w);
       return b;
@@ -389,7 +440,7 @@ function renderMap() {
       const btn = addNode(pts[li][0], pts[li][1],
         `${stars ? "done" : ""}${isNext ? " next" : ""}${levelUnlocked ? "" : " locked-node"}`,
         `${levelUnlocked ? words[0].emoji : "🔒"}<span class="stars">${"⭐".repeat(stars)}</span>`,
-        () => { sfx.pop(); startLevel(zone, li, words); });
+        (b) => { sfx.pop(); walkThen(b, () => startLevel(zone, li, words)); });
       if (isNext) {
         btn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
         scrollTarget = btn;
@@ -401,11 +452,12 @@ function renderMap() {
     const bossBtn = addNode(bx, by,
       `boss-node ${zs.boss ? "done" : ""}${bossNext ? " next" : ""}${unlocked && allDone ? "" : " locked-node"}`,
       zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒",
-      () => { sfx.pop(); startBoss(zone); });
+      (b) => { sfx.pop(); walkThen(b, () => startBoss(zone)); });
     if (bossNext) {
       bossBtn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
       scrollTarget = bossBtn;
     }
+    z.insertAdjacentHTML("beforeend", `<div class="terrain"></div>`);
     z.appendChild(inner);
     world.appendChild(z);
   });
@@ -542,7 +594,7 @@ function promptFor(word, mode, area) {
   setTimeout(() => speak(word.word), 600);
 }
 // each zone plays its own signature game
-const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "zap" };
+const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo" };
 
 const RENDER = {
   // hear it, see it — auto-advances
@@ -764,6 +816,65 @@ const RENDER = {
     promptFor(word, mode, area);
     area.appendChild(sea);
     area.appendChild(bucket);
+  },
+
+  // brainrot land: pogo-jump onto the platform holding the right answer (Keen style)
+  pogo(word, area, mode) {
+    const round = { type: "pogo", word, mode };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    const arena = document.createElement("div");
+    arena.className = "pogo-arena";
+    const kid = document.createElement("div");
+    kid.className = "pogo-kid";
+    kid.innerHTML = kidHTML();
+    const spots = [[6, 14], [56, 36], [20, 60]];
+    let done = false, busy = false, curX = 0, curY = 0;
+    options.forEach((opt, i) => {
+      const plat = document.createElement("button");
+      plat.className = "platform";
+      plat.innerHTML = optionLabel(opt, mode);
+      plat.style.left = `${spots[i][0]}%`;
+      plat.style.top = `${spots[i][1]}%`;
+      plat.onclick = () => {
+        if (done || busy) return;
+        busy = true;
+        // rects include the current transform, so deltas are relative to where the kid stands now
+        const pr = plat.getBoundingClientRect(), kr = kid.getBoundingClientRect();
+        const dx = curX + (pr.left + pr.width / 2 - (kr.left + kr.width / 2));
+        const dy = curY + (pr.top - kr.bottom);
+        sfx.boing();
+        kid.animate([
+          { transform: `translate(${curX}px, ${curY}px)` },
+          { transform: `translate(${(curX + dx) / 2}px, ${Math.min(curY, dy) - 55}px)`, offset: 0.5 },
+          { transform: `translate(${dx}px, ${dy}px)` },
+        ], { duration: 550, easing: "ease-out", fill: "forwards" });
+        setTimeout(() => {
+          if (opt.word === word.word) {
+            done = true;
+            answered(round, true, plat);
+          } else {
+            const inner = plat.firstElementChild;
+            inner.classList.remove("nope"); void inner.offsetWidth; inner.classList.add("nope");
+            answered(round, false, plat);
+            speak(word.word);
+            // hop back down
+            kid.animate([
+              { transform: `translate(${dx}px, ${dy}px)` },
+              { transform: `translate(${dx / 2}px, ${dy - 40}px)`, offset: 0.5 },
+              { transform: "translate(0px, 0px)" },
+            ], { duration: 500, easing: "ease-in", fill: "forwards" });
+            curX = 0; curY = 0;
+            setTimeout(() => { busy = false; }, 520);
+            return;
+          }
+          curX = dx; curY = dy;
+        }, 560);
+      };
+      arena.appendChild(plat);
+    });
+    arena.appendChild(kid);
+    promptFor(word, mode, area);
+    area.appendChild(arena);
   },
 
   // arcade: whack-a-word — answers pop out of neon holes, zap the right one while it's up
@@ -996,6 +1107,8 @@ if (location.hash === "#all") {
 }
 
 // ---------- boot ----------
+$("title-mascot").innerHTML = MASCOT_HTML;
+$("game-mascot").innerHTML = MASCOT_HTML;
 $("btn-play").onclick = () => {
   audioCtx(); // unlock audio on the user gesture
   sfx.fanfare();
