@@ -31,8 +31,10 @@ first (hear 2× + picture), then played.
 
 ## Mini-games
 
-1. **Mine the Word** (listening) — word spoken; 3 picture blocks drop; tap the
-   right one, it cracks and drops a coin. Wrong wobbles; right one pulses as hint.
+1. **Mine the Word** (listening) — word spoken; a 3×3 wall of dirt blocks, each
+   takes 2 pickaxe hits (swing animation, crack stages, debris). The 3 items are
+   hidden behind blocks — dig to discover them, grab the right one, it flies into
+   a chest. One empty cell hides a bonus coin. Only grabbing wrong counts as a miss.
 2. **Penalty Kick** (reading) — picture shown; three goals labeled with written
    words; flick the ball at the right one. Net ripple + crowd roar.
 3. **Build the Word** (writing) — tap/drag letter blocks into slots to spell the

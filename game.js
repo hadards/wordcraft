@@ -78,6 +78,7 @@ function noise(start, dur, vol = 0.2) {
 }
 const sfx = {
   pop: () => tone(600, 0, 0.08, "sine", 0.15),
+  dig: () => { noise(0, 0.07, 0.18); tone(180, 0, 0.06, "square", 0.06); },
   correct: () => { tone(523, 0, 0.12); tone(659, 0.1, 0.12); tone(784, 0.2, 0.2); },
   wrong: () => { tone(300, 0, 0.15, "sawtooth", 0.08); tone(240, 0.13, 0.25, "sawtooth", 0.08); },
   coin: () => { tone(988, 0, 0.07, "square", 0.1); tone(1319, 0.07, 0.18, "square", 0.1); },
@@ -192,6 +193,54 @@ function reward(el, { coins = 2, xp = 5 } = {}) {
   }
   save();
   renderHUD();
+}
+
+// ---------- mining effects ----------
+function swingPickaxe(x, y) {
+  let p = $("pickaxe");
+  if (!p) {
+    p = document.createElement("div");
+    p.id = "pickaxe";
+    p.textContent = "⛏️";
+    document.body.appendChild(p);
+  }
+  p.style.left = `${x + 6}px`;
+  p.style.top = `${y - 44}px`;
+  p.style.opacity = "1";
+  p.classList.remove("swing");
+  void p.offsetWidth;
+  p.classList.add("swing");
+  clearTimeout(p._hide);
+  p._hide = setTimeout(() => { p.style.opacity = "0"; }, 400);
+}
+function debris(x, y) {
+  const colors = ["#8b5a2b", "#6b421c", "#a9825a", "#4e2f12"];
+  for (let i = 0; i < 8; i++) {
+    const d = document.createElement("div");
+    d.className = "debris-bit";
+    d.style.background = colors[i % colors.length];
+    d.style.left = `${x}px`;
+    d.style.top = `${y}px`;
+    d.style.setProperty("--cx", `${(Math.random() - 0.5) * 160}px`);
+    d.style.setProperty("--cy", `${40 + Math.random() * 80}px`);
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 800);
+  }
+}
+function flyItem(fromEl, toEl, emoji) {
+  const from = fromEl.getBoundingClientRect();
+  const to = toEl.getBoundingClientRect();
+  const f = document.createElement("div");
+  f.className = "fly-item";
+  f.textContent = emoji;
+  f.style.left = `${from.left + from.width / 2}px`;
+  f.style.top = `${from.top + from.height / 2}px`;
+  document.body.appendChild(f);
+  requestAnimationFrame(() => {
+    f.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(.4)`;
+    f.style.opacity = "0";
+  });
+  setTimeout(() => f.remove(), 650);
 }
 
 // ---------- hint hand (English-only immersion: show, don't tell) ----------
@@ -389,40 +438,78 @@ const RENDER = {
     }), 350);
   },
 
-  // hear the word, tap the right falling block
+  // hear the word, smash through a wall of blocks with the pickaxe,
+  // find the hidden item and grab it — it flies into the chest
   mine(word, area) {
     const round = { type: "mine", word };
-    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
-    const row = document.createElement("div");
-    row.className = "mine-row";
+    const options = [word, ...distractors(word, session.zone, 2)];
+    const cellOrder = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const itemCells = cellOrder.slice(0, 3);
+    const coinCell = cellOrder[3]; // one buried bonus coin makes digging itself pay off
+    const wall = document.createElement("div");
+    wall.className = "mine-wall";
+    const chest = document.createElement("div");
+    chest.className = "mine-chest";
+    chest.textContent = "🧰";
     let done = false;
-    options.forEach((opt) => {
-      const b = document.createElement("button");
-      b.className = "mine-block";
-      b.textContent = opt.emoji;
-      b.onclick = () => {
-        if (done) return;
+    let targetBehind = null;
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement("div");
+      cell.className = "mine-cell";
+      const itemIdx = itemCells.indexOf(i);
+      const opt = itemIdx >= 0 ? options[itemIdx] : null;
+      const behind = document.createElement("div");
+      behind.className = "behind";
+      const face = document.createElement("div");
+      face.className = "block-face";
+      let hits = 0;
+      face.onclick = (e) => {
+        swingPickaxe(e.clientX, e.clientY);
+        hits++;
+        sfx.dig();
+        if (hits === 1) face.classList.add("hit1");
+        else {
+          face.classList.remove("hit1");
+          face.classList.add("hit2");
+          setTimeout(() => {
+            face.classList.add("smashed");
+            sfx.crack();
+            debris(e.clientX, e.clientY);
+            if (opt) behind.innerHTML = `<span class="reveal-item">${opt.emoji}</span>`;
+            else if (i === coinCell) {
+              behind.innerHTML = `<span class="reveal-item">🪙</span>`;
+              S.coins++;
+              save();
+              flyCoin(behind, 1);
+              setTimeout(() => { behind.innerHTML = ""; renderHUD(); }, 500);
+            }
+          }, 100);
+        }
+      };
+      behind.onclick = () => {
+        if (done || !opt || !behind.querySelector(".reveal-item")) return;
         if (opt.word === word.word) {
           done = true;
-          b.classList.add("crack");
-          sfx.crack();
-          answered(round, true, b);
+          flyItem(behind, chest, opt.emoji);
+          chest.classList.add("got");
+          answered(round, true, behind);
         } else {
-          b.classList.remove("nope"); void b.offsetWidth; b.classList.add("nope");
-          answered(round, false, b);
-          row.querySelectorAll(".mine-block").forEach((x) => {
-            if (x.textContent === word.emoji) x.classList.add("hint");
-          });
+          behind.classList.remove("nope"); void behind.offsetWidth; behind.classList.add("nope");
+          answered(round, false, behind);
+          if (targetBehind && targetBehind.querySelector(".reveal-item")) targetBehind.classList.add("hint-glow");
           speak(word.word);
         }
       };
-      row.appendChild(b);
-    });
+      if (opt && opt.word === word.word) targetBehind = behind;
+      cell.appendChild(behind);
+      cell.appendChild(face);
+      wall.appendChild(cell);
+    }
     area.appendChild(speakBtn(word.word));
-    area.appendChild(row);
+    area.appendChild(wall);
+    area.appendChild(chest);
     setTimeout(() => speak(word.word), 700);
-    const target = [...row.children][options.findIndex((o) => o.word === word.word)];
-    scheduleHint("mine", target);
+    scheduleHint("mine", [...wall.children][itemCells[0]]);
   },
 
   // see the picture, shoot the ball at the right written word

@@ -321,29 +321,102 @@ body.theme-stadium #stage, body.theme-arcade #stage { color: #fff; }
 .intro-card .word-label { font-family: var(--font-display); font-size: clamp(2rem, 9vw, 3.4rem); letter-spacing: .06em; }
 @keyframes card-in { from { transform: scale(.4) rotate(-6deg); opacity: 0; } }
 
-/* Mine the Word */
-.mine-row { display: flex; gap: clamp(10px, 4vw, 30px); }
-.mine-block {
-  width: clamp(92px, 26vw, 150px);
-  height: clamp(92px, 26vw, 150px);
-  font-size: clamp(3rem, 13vw, 5rem);
-  background: linear-gradient(#a9825a, #8b5a2b);
+/* Mine the Word — dig through a wall of blocks to find the hidden item */
+.mine-wall {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: #3a2510;
+  padding: 10px;
+  border-radius: 16px;
   border: 5px solid;
-  border-color: #c9a87e #6b421c #6b421c #c9a87e;
-  border-radius: 14px;
-  box-shadow: 0 7px 0 #4e2f12;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  animation: block-drop .55s cubic-bezier(.2,1.3,.4,1) backwards;
-  transition: transform .08s;
+  border-color: #5c3d1e #241608 #241608 #5c3d1e;
+  box-shadow: 0 8px 0 #170d04, 0 14px 18px rgba(0,0,0,.3);
 }
-.mine-row .mine-block:nth-child(2) { animation-delay: .12s; }
-.mine-row .mine-block:nth-child(3) { animation-delay: .24s; }
+.mine-cell {
+  position: relative;
+  width: clamp(72px, 18vw, 110px);
+  height: clamp(72px, 18vw, 110px);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.mine-cell .behind {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(2.4rem, 9vw, 3.6rem);
+  background: radial-gradient(#2c1c0c, #1a1006);
+  cursor: pointer;
+}
+.mine-cell .behind:active { transform: scale(.92); }
+.mine-cell .behind .reveal-item { animation: pop-in .3s cubic-bezier(.2,1.5,.4,1); }
+.mine-cell .behind.nope { animation: wobble .4s; }
+.mine-cell .behind.hint-glow { box-shadow: inset 0 0 24px 6px rgba(255,201,60,.8); }
+.mine-cell .block-face {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(#a9825a, #8b5a2b);
+  border: 4px solid;
+  border-color: #c9a87e #6b421c #6b421c #c9a87e;
+  border-radius: 8px;
+  cursor: pointer;
+  animation: block-drop .5s cubic-bezier(.2,1.3,.4,1) backwards;
+  z-index: 2;
+}
+.mine-cell:nth-child(3n+2) .block-face { animation-delay: .08s; }
+.mine-cell:nth-child(3n) .block-face { animation-delay: .16s; }
 @keyframes block-drop { from { transform: translateY(-90vh); } }
-.mine-block.crack { animation: crack .5s forwards; }
-@keyframes crack { 30% { transform: scale(1.15) rotate(-4deg); } 100% { transform: scale(0) rotate(14deg); opacity: 0; } }
-.mine-block.nope { animation: wobble .4s; }
-.mine-block.hint { animation: node-pulse 1s ease-in-out infinite; }
+.block-face.hit1 { background: linear-gradient(#96714b, #74481f); }
+.block-face.hit1::after, .block-face.hit2::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg stroke='%23241608' stroke-width='3' fill='none'%3E%3Cpath d='M50 50 L20 25 M50 50 L80 30 M50 50 L70 80'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: .6;
+}
+.block-face.hit2 {
+  background: linear-gradient(#7d5a38, #5c3616);
+  animation: shake .12s;
+}
+.block-face.hit2::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg stroke='%23120a03' stroke-width='4' fill='none'%3E%3Cpath d='M50 50 L20 25 M50 50 L80 30 M50 50 L70 80 M50 50 L25 75 M50 50 L55 15 M20 25 L10 45 M80 30 L85 55'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: .9;
+}
+@keyframes shake { 25% { transform: translate(-3px, 2px); } 75% { transform: translate(3px, -2px); } }
+.block-face.smashed { animation: smash .3s forwards; pointer-events: none; }
+@keyframes smash { to { transform: scale(1.25); opacity: 0; } }
+#pickaxe {
+  position: fixed;
+  font-size: 3rem;
+  z-index: 70;
+  pointer-events: none;
+  transform-origin: 80% 80%;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.4));
+  transition: opacity .2s;
+}
+#pickaxe.swing { animation: swing .22s ease-in; }
+@keyframes swing { 0% { transform: rotate(-80deg) translateY(-16px); } 60% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+.debris-bit {
+  position: fixed;
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  z-index: 69;
+  pointer-events: none;
+  animation: confetti-fall .7s ease-in forwards;
+}
+.mine-chest {
+  font-size: 3rem;
+  line-height: 1.1;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.25));
+}
+.mine-chest.got { animation: bump .4s; }
+.fly-item {
+  position: fixed;
+  font-size: 2.6rem;
+  z-index: 100;
+  pointer-events: none;
+  transition: transform .6s cubic-bezier(.3,-.2,.4,1), opacity .6s;
+}
 @keyframes wobble { 25% { transform: translateX(-10px) rotate(-4deg); } 75% { transform: translateX(10px) rotate(4deg); } }
 
 /* Penalty Kick */
