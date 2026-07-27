@@ -1005,6 +1005,33 @@ body.theme-brainrot #stage-ground{ --t1: #7a1f4e; --t2: #6b1a44; }
 .platform:active { transform: translateY(3px); }
 .pogo-kid { position: absolute; bottom: 4px; left: 50%; margin-left: -20px; z-index: 3; }
 
+/* ============ KEEN LEVELS: bright sprites on flat dark backgrounds ============ */
+/* real Keen levels are colored tiles on near-black — kill the soft gradients in games */
+body.theme-meadow  { background: #071523; }
+body.theme-biome   { background: #0d0702; }
+body.theme-stadium { background: #04091c; }
+body.theme-ocean   { background: #021520; }
+body.theme-arcade  { background: #0a0417; }
+body.theme-brainrot { background: #170313; }
+body[class*="theme-"] #stage { color: #fff; }
+body[class*="theme-"] .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
+body[class*="theme-"] .built-row .built-word { border-radius: 0; }
+.catch-sky, .fish-sea {
+  background: rgba(255,255,255,.05);
+  border: 3px solid rgba(255,255,255,.18);
+  border-radius: 0;
+}
+
+/* flat retro zone colors on the overworld too — cartridge look, no smooth blends */
+#map-world { background: #0a0d18; }
+.zone-meadow  { background: #3f9e4e; }
+.zone-biome   { background: #6e4a24; }
+.zone-stadium { background: #1b2a4a; }
+.zone-ocean   { background: #0b5e8e; }
+.zone-arcade  { background: #2a1b54; }
+.zone-brainrot { background: #8e2270; }
+.map-path path { stroke-dasharray: 6 10; stroke-linecap: butt; stroke-width: 6; }
+
 /* pixel font accents elsewhere */
 #build-tag, .shop-title { font-family: var(--font-pixel); font-size: .75rem; }
 .shop-title { padding: 10px; }
