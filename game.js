@@ -791,6 +791,14 @@ function renderShop() {
   });
 }
 
+// ---------- dev cheats: #all unlocks everything, #reset wipes progress ----------
+if (location.hash === "#reset") { S = defaultState(); save(); }
+if (location.hash === "#all") {
+  ZONES.forEach((z) => { S.zones[z.id] = { stars: chunk(z.words, LEVEL_SIZE).map(() => 3), boss: true }; });
+  S.coins += 200;
+  save();
+}
+
 // ---------- boot ----------
 $("btn-play").onclick = () => {
   audioCtx(); // unlock audio on the user gesture
