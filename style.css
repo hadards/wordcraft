@@ -153,6 +153,14 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
 #game-logo span:nth-child(4) { animation-delay: .3s; }
 #game-logo .logo-craft { color: var(--gold); animation-delay: .4s; text-shadow: 0 5px 0 var(--gold-dark), 0 9px 0 rgba(0,0,0,.18); }
 @keyframes logo-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+#build-tag {
+  position: fixed;
+  bottom: 8px; right: 12px;
+  font-family: var(--font-display);
+  font-size: .9rem;
+  color: rgba(255,255,255,.85);
+  text-shadow: 0 2px 0 rgba(0,0,0,.25);
+}
 
 .title-clouds span { position: fixed; font-size: 4rem; opacity: .8; animation: drift 30s linear infinite; }
 .title-clouds span:nth-child(1) { top: 12%; animation-duration: 34s; }
