@@ -12,6 +12,7 @@ const defaultState = () => ({
   zones: {},                 // zoneId -> {stars: [], boss: false}
   gear: { owned: [], hat: null, eyes: null, hand: null },
   brainrots: [],           // collected brainrot ids/names
+  voiceName: null,         // preferred TTS voice
   seenHints: {},             // mechanic -> true once answered
 });
 let S = defaultState();
@@ -28,9 +29,13 @@ const XP_PER_LEVEL = 50;
 
 // ---------- audio: TTS + synthesized SFX ----------
 let voice = null;
+const enVoices = () => speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
 function pickVoice() {
-  const vs = speechSynthesis.getVoices().filter((v) => v.lang.startsWith("en"));
-  voice = vs.find((v) => /natural|google us/i.test(v.name)) || vs.find((v) => v.lang === "en-US") || vs[0] || null;
+  const vs = enVoices();
+  voice = (S.voiceName && vs.find((v) => v.name === S.voiceName))
+    || vs.find((v) => /natural/i.test(v.name))
+    || vs.find((v) => /google us/i.test(v.name))
+    || vs.find((v) => v.lang === "en-US") || vs[0] || null;
 }
 if ("speechSynthesis" in window) {
   pickVoice();
@@ -1136,4 +1141,15 @@ $("btn-skip").onclick = () => {
 };
 $("hud-shop").onclick = () => { sfx.pop(); session = null; renderShop(); };
 $("hud-sound").onclick = () => { S.muted = !S.muted; save(); renderHUD(); if (!S.muted) sfx.pop(); };
+// cycle through English voices; each tap speaks a sample so you can pick by ear
+$("hud-voice").onclick = () => {
+  const vs = enVoices();
+  if (!vs.length) return;
+  const i = vs.findIndex((v) => v.name === (voice && voice.name));
+  voice = vs[(i + 1) % vs.length];
+  S.voiceName = voice.name;
+  save();
+  sfx.pop();
+  speak("Hello! Let's play WordCraft!");
+};
 renderHUD();
