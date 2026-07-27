@@ -363,22 +363,96 @@ const DECOR = {
 
 function zoneUnlocked(i) { return i === 0 || zoneState(ZONES[i - 1].id).boss; }
 
-// walk the pixel kid across the map to the tapped node, then start (Keen overworld feel)
-function walkThen(targetBtn, fn) {
-  const kid = document.querySelector(".node-mascot");
-  if (!kid) return fn();
-  const kr = kid.getBoundingClientRect(), tr = targetBtn.getBoundingClientRect();
-  const dx = tr.left + tr.width / 2 - (kr.left + kr.width / 2);
-  const dy = tr.top - kr.top;
-  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return fn();
-  sfx.boing();
-  kid.animate([
-    { transform: "translateX(-50%)" },
-    { transform: `translate(calc(-50% + ${dx / 2}px), ${dy / 2 - 46}px)`, offset: 0.5 },
-    { transform: `translate(calc(-50% + ${dx}px), ${dy}px)` },
-  ], { duration: 650, easing: "ease-in-out", fill: "forwards" });
-  setTimeout(fn, 700);
+// ---------- overworld walking: real continuous movement, Keen-style ----------
+// The kid walks freely along the zigzag path with arrow keys / A-D / the
+// on-screen D-pad — his position tracks progress along the whole route
+// (not just x), so he visibly walks uphill/downhill between nodes rather
+// than teleporting. Reaching a node's spot auto-enters it. No jump/gravity —
+// this is the overworld walk, not a platformer physics sim.
+const walker = { t: 0, dir: 1, moving: 0, route: [], nodeBtns: [], raf: null, entering: false, inner: null };
+
+function buildRoute(nodeEls) {
+  // route = every node's [x,y] in path order; t is a float index into this array
+  return nodeEls.map((n) => [parseFloat(n.parentElement.style.left), parseFloat(n.parentElement.style.top)]);
 }
+
+function setupWalker(scrollWrap) {
+  clearInterval(walker.raf);
+  walker.entering = false;
+  const zones = [...scrollWrap.querySelectorAll(".zone:not(.locked)")];
+  const zoneEl = zones[zones.length - 1] || null;
+  if (!zoneEl) return;
+  walker.inner = zoneEl.querySelector(".zone-inner");
+  walker.nodeBtns = [...zoneEl.querySelectorAll(".map-node:not(.locked-node)")];
+  walker.route = buildRoute(walker.nodeBtns);
+  const doneCount = walker.nodeBtns.filter((n) => n.classList.contains("done")).length;
+  walker.t = Math.min(doneCount, walker.route.length - 1);
+  renderKidAtT();
+  scrollWrap.scrollTop = zoneEl.offsetTop - 80;
+  tick();
+}
+
+function posAtT(t) {
+  const r = walker.route;
+  if (!r.length) return [50, 50];
+  const i = Math.max(0, Math.min(r.length - 1, Math.floor(t)));
+  const frac = t - i;
+  const a = r[i], b = r[Math.min(i + 1, r.length - 1)];
+  return [a[0] + (b[0] - a[0]) * frac, a[1] + (b[1] - a[1]) * frac];
+}
+
+function renderKidAtT() {
+  const kid = $("map-kid");
+  if (!kid || !walker.inner) return;
+  const [x, y] = posAtT(walker.t);
+  kid.style.left = `${x}%`;
+  kid.style.top = `${y - 9}%`;
+  kid.classList.toggle("facing-left", walker.dir < 0);
+}
+
+const TICK_MS = 30;
+const WALK_SPEED = 0.03; // route-steps per tick
+function tick() {
+  walker.raf = setInterval(tickStep, TICK_MS);
+}
+function tickStep() {
+  if (walker.entering || !walker.moving || !walker.route.length) return;
+  walker.dir = walker.moving;
+  walker.t = Math.max(0, Math.min(walker.route.length - 1, walker.t + walker.moving * WALK_SPEED));
+  renderKidAtT();
+  const nearestI = Math.round(walker.t);
+  if (Math.abs(walker.t - nearestI) < 0.03) {
+    const btn = walker.nodeBtns[nearestI];
+    if (btn && !btn.classList.contains("locked-node") && btn !== walker._lastEntered) {
+      walker.entering = true;
+      walker.moving = 0;
+      walker._lastEntered = btn;
+      sfx.boing();
+      setTimeout(() => btn.click(), 220);
+    }
+  }
+}
+
+function setMove(dir) { walker.moving = dir; }
+window.addEventListener("keydown", (e) => {
+  if ($("screen-map").classList.contains("hidden")) return;
+  if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") setMove(-1);
+  if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") setMove(1);
+});
+window.addEventListener("keyup", (e) => {
+  if (["ArrowLeft", "ArrowRight", "a", "A", "d", "D"].includes(e.key)) setMove(0);
+});
+// on-screen D-pad: press-and-hold, pointer capture so a drifting cursor/finger
+// doesn't cancel the hold (mouseleave would fire during drag/scroll otherwise)
+[[$("dpad-left"), -1], [$("dpad-right"), 1]].forEach(([btn, dir]) => {
+  btn.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    btn.setPointerCapture(e.pointerId);
+    setMove(dir);
+  });
+  btn.addEventListener("pointerup", () => setMove(0));
+  btn.addEventListener("pointercancel", () => setMove(0));
+});
 
 function pathThrough(pts) {
   let d = `M ${pts[0][0]} ${pts[0][1]}`;
@@ -397,7 +471,6 @@ function renderMap() {
   wrap.innerHTML = "";
   const world = document.createElement("div");
   world.id = "map-world";
-  let scrollTarget = null;
   ZONES.forEach((zone, zi) => {
     const zs = zoneState(zone.id);
     const levels = chunk(zone.words, LEVEL_SIZE);
@@ -442,32 +515,27 @@ function renderMap() {
       const levelUnlocked = unlocked && (li === 0 || (zs.stars[li - 1] || 0) > 0);
       const isNext = levelUnlocked && stars === 0 && !nextFound;
       if (isNext) nextFound = true;
-      const btn = addNode(pts[li][0], pts[li][1],
+      addNode(pts[li][0], pts[li][1],
         `${stars ? "done" : ""}${isNext ? " next" : ""}${levelUnlocked ? "" : " locked-node"}`,
         `${levelUnlocked ? words[0].emoji : "🔒"}<span class="stars">${"⭐".repeat(stars)}</span>`,
-        (b) => { sfx.pop(); walkThen(b, () => startLevel(zone, li, words)); });
-      if (isNext) {
-        btn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
-        scrollTarget = btn;
-      }
+        () => { sfx.pop(); startLevel(zone, li, words); });
     });
     const allDone = levels.every((_, li) => (zs.stars[li] || 0) > 0);
     const bossNext = unlocked && allDone && !zs.boss;
     const [bx, by] = pts[levels.length];
-    const bossBtn = addNode(bx, by,
+    addNode(bx, by,
       `boss-node ${zs.boss ? "done" : ""}${bossNext ? " next" : ""}${unlocked && allDone ? "" : " locked-node"}`,
       zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒",
-      (b) => { sfx.pop(); walkThen(b, () => startBoss(zone)); });
-    if (bossNext) {
-      bossBtn.insertAdjacentHTML("beforeend", `<div class="node-mascot mascot">${MASCOT_HTML}</div>`);
-      scrollTarget = bossBtn;
-    }
+      () => { sfx.pop(); startBoss(zone); });
     z.insertAdjacentHTML("beforeend", `<div class="terrain"></div>`);
     z.appendChild(inner);
     world.appendChild(z);
   });
   wrap.appendChild(world);
-  if (scrollTarget) scrollTarget.scrollIntoView({ block: "center" });
+  // exactly one kid, placed in the zone holding the player's current position
+  const homeZone = [...world.querySelectorAll(".zone:not(.locked)")].pop();
+  if (homeZone) homeZone.querySelector(".zone-inner").insertAdjacentHTML("beforeend", `<div id="map-kid" class="mascot">${MASCOT_HTML}</div>`);
+  setupWalker(wrap);
 }
 
 // ---------- session engine ----------
@@ -498,6 +566,8 @@ function startBoss(zone) {
 }
 
 function beginSession() {
+  clearInterval(walker.raf);
+  walker.moving = 0;
   show("screen-game");
   document.body.className = `theme-${session.zone.id}`;
   renderHUD();
