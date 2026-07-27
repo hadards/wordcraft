@@ -11,6 +11,7 @@ const defaultState = () => ({
   words: {},                 // word -> {c: correct, w: wrong}
   zones: {},                 // zoneId -> {stars: [], boss: false}
   gear: { owned: [], hat: null, eyes: null, hand: null },
+  brainrots: [],           // collected brainrot ids/names
   seenHints: {},             // mechanic -> true once answered
 });
 let S = defaultState();
@@ -310,6 +311,15 @@ const DECOR = {
     { e: "🎲", x: 8, y: 66, c: "d-float", s: 1.7 },
     { e: "✨", x: 90, y: 78, c: "d-sparkle", s: 1.4 },
   ],
+  brainrot: [
+    { e: "🧠", x: 8, y: 14, c: "d-float", s: 2.2 },
+    { e: "🦈👟", x: 0, y: 34, c: "d-drift", s: 1.6 },
+    { e: "🍌", x: 88, y: 24, c: "d-sway", s: 1.8 },
+    { e: "🛞", x: 8, y: 60, c: "d-float", s: 1.7 },
+    { e: "🪐", x: 88, y: 52, c: "d-float", s: 1.9 },
+    { e: "✨", x: 48, y: 12, c: "d-sparkle", s: 1.5 },
+    { e: "🐊✈️", x: 30, y: 44, c: "d-drift", s: 1.5 },
+  ],
 };
 
 function zoneUnlocked(i) { return i === 0 || zoneState(ZONES[i - 1].id).boss; }
@@ -493,10 +503,11 @@ function endSession() {
   if (s.boss) {
     zs.boss = true;
     S.coins += 50;
+    if (!S.brainrots.includes(s.zone.boss.name)) S.brainrots.push(s.zone.boss.name);
     save();
     sfx.fanfare();
-    celebrate(`<div class="celebrate-big">🏆</div><div class="celebrate-text">${s.zone.name} CHAMPION!</div><div class="celebrate-text">+ 50 🪙</div>`, 3000, renderMap);
-    speak("You are the champion! Incredible!");
+    celebrate(`<div class="celebrate-big">${s.zone.boss.emoji}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
+    speak(`You got ${s.zone.boss.name}! Amazing!`);
   } else {
     const stars = s.mistakes === 0 ? 3 : s.mistakes <= 2 ? 2 : 1;
     zs.stars[s.levelIndex] = Math.max(zs.stars[s.levelIndex] || 0, stars);
@@ -531,7 +542,7 @@ function promptFor(word, mode, area) {
   setTimeout(() => speak(word.word), 600);
 }
 // each zone plays its own signature game
-const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap" };
+const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "zap" };
 
 const RENDER = {
   // hear it, see it — auto-advances
@@ -904,13 +915,49 @@ function addBuiltWord(word) {
   if (row) row.innerHTML = builtWords.map((w) => `<span class="built-word">${w.emoji} ${w.word.toUpperCase()}</span>`).join("");
 }
 
-// ---------- shop ----------
+// ---------- shop & brainrot collection ----------
+function bossBrainrots() {
+  return ZONES.map((z) => ({ id: z.id + "-boss", name: z.boss.name, emoji: z.boss.emoji, boss: true }));
+}
 function renderShop() {
   show("screen-shop");
   renderHUD();
   $("shop-avatar").innerHTML = avatarHTML();
   const grid = $("shop-items");
   grid.innerHTML = "";
+
+  // brainrot collection: bosses are stolen by beating them, the rest are bought
+  grid.insertAdjacentHTML("beforeend", `<div class="shop-title">🧠 BRAINROTS</div>`);
+  [...bossBrainrots(), ...BRAINROTS].forEach((br) => {
+    const owned = S.brainrots.includes(br.name);
+    const canBuy = !br.boss && S.coins >= br.price;
+    const b = document.createElement("button");
+    b.className = `block-btn shop-item brainrot-card${owned ? " owned" : ""}${!owned && !canBuy ? " cant" : ""}`;
+    b.innerHTML = `<span class="br-emoji">${owned ? br.emoji : "❓"}</span>
+      <span class="br-name">${owned ? br.name : br.boss ? "Beat the boss!" : "???"}</span>
+      ${owned ? "" : `<span class="price">${br.boss ? "👑" : `${br.price} 🪙`}</span>`}`;
+    b.onclick = () => {
+      if (owned) {
+        // tapping your brainrot says its name — the whole point
+        sfx.pop();
+        b.classList.remove("got"); void b.offsetWidth; b.classList.add("got");
+        speak(br.name, { rate: 0.95 });
+      } else if (!br.boss && canBuy) {
+        S.coins -= br.price;
+        S.brainrots.push(br.name);
+        sfx.fanfare();
+        confetti();
+        speak(`You got ${br.name}!`);
+        save();
+        renderShop();
+      } else {
+        sfx.wrong();
+      }
+    };
+    grid.appendChild(b);
+  });
+
+  grid.insertAdjacentHTML("beforeend", `<div class="shop-title">🎽 GEAR</div>`);
   GEAR.forEach((g) => {
     const owned = S.gear.owned.includes(g.id);
     const equipped = S.gear[g.slot] === g.id;
@@ -940,8 +987,11 @@ function renderShop() {
 // ---------- dev cheats: #all unlocks everything, #reset wipes progress ----------
 if (location.hash === "#reset") { S = defaultState(); save(); }
 if (location.hash === "#all") {
-  ZONES.forEach((z) => { S.zones[z.id] = { stars: chunk(z.words, LEVEL_SIZE).map(() => 3), boss: true }; });
-  S.coins += 200;
+  ZONES.forEach((z) => {
+    S.zones[z.id] = { stars: chunk(z.words, LEVEL_SIZE).map(() => 3), boss: true };
+    if (!S.brainrots.includes(z.boss.name)) S.brainrots.push(z.boss.name);
+  });
+  S.coins += 300;
   save();
 }
 

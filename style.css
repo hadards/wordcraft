@@ -200,13 +200,14 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
 #map-scroll { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; }
 #map-world {
   position: relative;
-  /* sky → meadow → underground → night stadium → deep ocean → neon arcade */
+  /* sky → meadow → underground → night stadium → deep ocean → neon arcade → brainrot land */
   background: linear-gradient(
     #7bd4ff 0px, #a5e17a 480px, #86b04e 600px,
     #7a5230 780px, #452c12 1060px, #241708 1200px,
     #16213e 1380px, #234066 1740px,
     #0b5e8e 1930px, #064066 2300px, #061f4a 2780px,
-    #2a1b54 3000px, #1c1140 100%);
+    #2a1b54 3000px, #1c1140 3300px,
+    #551b6e 3500px, #a1247e 3800px, #d63384 100%);
   padding-bottom: 70px;
 }
 .zone { position: relative; height: 600px; }
@@ -371,8 +372,9 @@ body.theme-biome   { background: linear-gradient(#8fd0ff, #c9b08a); }
 body.theme-stadium { background: linear-gradient(#1b2a4a, #35608a); }
 body.theme-ocean   { background: linear-gradient(#0b5e8e, #063050); }
 body.theme-arcade  { background: linear-gradient(#1c1140, #4a2d8f); }
-body.theme-stadium #stage, body.theme-arcade #stage, body.theme-ocean #stage { color: #fff; }
-body.theme-ocean .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
+body.theme-brainrot { background: linear-gradient(#551b6e, #d63384); }
+body.theme-stadium #stage, body.theme-arcade #stage, body.theme-ocean #stage, body.theme-brainrot #stage { color: #fff; }
+body.theme-ocean .build-slot, body.theme-brainrot .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
 
 /* big speaker button — replays the word */
 .speak-btn {
@@ -731,6 +733,29 @@ body.theme-stadium .build-slot, body.theme-arcade .build-slot { border-color: rg
   font-size: 2.4rem;
   line-height: 1.2;
 }
+.shop-title {
+  grid-column: 1 / -1;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--ink);
+  text-align: center;
+  background: rgba(255,255,255,.55);
+  border-radius: 12px;
+  padding: 6px;
+  margin-top: 6px;
+}
+.brainrot-card { background: linear-gradient(#fce4f3, #f7c1e4); border-color: #fff #d998c4 #d998c4 #fff; box-shadow: 0 6px 0 #b5749f, 0 10px 14px rgba(0,0,0,.18); }
+.brainrot-card .br-emoji { font-size: 2.2rem; line-height: 1.2; }
+.brainrot-card .br-name {
+  font-family: var(--font-display);
+  font-size: .85rem;
+  line-height: 1.15;
+  color: var(--ink);
+  text-align: center;
+}
+.brainrot-card.got { animation: bump .45s; }
+.map-node.boss-node { font-size: 2.2rem; }
+.boss-emoji { font-size: clamp(3.6rem, 16vw, 6.5rem); }
 .shop-item .price { font-family: var(--font-display); font-size: 1.05rem; }
 .shop-item.owned .price { color: var(--good); }
 .shop-item.equipped { background: #d2f5c0; }

@@ -5,7 +5,7 @@ const ZONES = [
     id: "meadow",
     name: "Starter Meadow",
     icon: "🌈",
-    boss: { name: "Sleepy Bear", emoji: "🐻" },
+    boss: { name: "Chimpanzini Bananini", emoji: "🐵🍌" },
     words: [
       { word: "cat", emoji: "🐱" },
       { word: "dog", emoji: "🐶" },
@@ -25,7 +25,7 @@ const ZONES = [
     id: "biome",
     name: "Blocky Biome",
     icon: "⛏️",
-    boss: { name: "Cave Dragon", emoji: "🐲" },
+    boss: { name: "Bombardiro Crocodilo", emoji: "🐊✈️" },
     words: [
       { word: "diamond", emoji: "💎" },
       { word: "sword", emoji: "🗡️" },
@@ -45,7 +45,7 @@ const ZONES = [
     id: "stadium",
     name: "Super Stadium",
     icon: "⚽",
-    boss: { name: "Goal Giant", emoji: "🦁" },
+    boss: { name: "Tung Tung Tung Sahur", emoji: "🪵🥁" },
     words: [
       { word: "ball", emoji: "⚽" },
       { word: "goal", emoji: "🥅" },
@@ -65,7 +65,7 @@ const ZONES = [
     id: "ocean",
     name: "Ocean World",
     icon: "🌊",
-    boss: { name: "Octopus King", emoji: "🐙" },
+    boss: { name: "Tralalero Tralala", emoji: "🦈👟" },
     words: [
       { word: "shark", emoji: "🦈" },
       { word: "whale", emoji: "🐋" },
@@ -85,7 +85,7 @@ const ZONES = [
     id: "arcade",
     name: "Neon Arcade",
     icon: "🕹️",
-    boss: { name: "Mega Robot", emoji: "🤖" },
+    boss: { name: "Cappuccino Assassino", emoji: "☕🥷" },
     words: [
       { word: "jump", emoji: "🦘" },
       { word: "play", emoji: "🎮" },
@@ -101,6 +101,40 @@ const ZONES = [
       { word: "candy", emoji: "🍬" },
     ],
   },
+  {
+    // the meme characters are combos of real nouns — this zone teaches the ingredients
+    id: "brainrot",
+    name: "Brainrot Land",
+    icon: "🧠",
+    boss: { name: "Vaca Saturno Saturnita", emoji: "🐮🪐" },
+    words: [
+      { word: "banana", emoji: "🍌" },
+      { word: "monkey", emoji: "🐵" },
+      { word: "plane", emoji: "✈️" },
+      { word: "coffee", emoji: "☕" },
+      { word: "drum", emoji: "🥁" },
+      { word: "frog", emoji: "🐸" },
+      { word: "wheel", emoji: "🛞" },
+      { word: "cow", emoji: "🐮" },
+      { word: "planet", emoji: "🪐" },
+      { word: "elephant", emoji: "🐘" },
+      { word: "cactus", emoji: "🌵" },
+      { word: "camel", emoji: "🐫" },
+    ],
+  },
+];
+
+// Brainrot collection: bosses are stolen by beating them; these are bought with coins.
+// Prices follow rarity, like in Steal a Brainrot.
+const BRAINROTS = [
+  { id: "patapim", name: "Brr Brr Patapim", emoji: "🌳🐒", price: 40 },
+  { id: "ambalabu", name: "Boneca Ambalabu", emoji: "🐸🛞", price: 60 },
+  { id: "trippi", name: "Trippi Troppi", emoji: "🐱🦐", price: 80 },
+  { id: "larila", name: "Lirili Larila", emoji: "🐘🌵", price: 100 },
+  { id: "ballerina", name: "Ballerina Cappuccina", emoji: "🩰☕", price: 130 },
+  { id: "frigo", name: "Frigo Camelo", emoji: "🐫🧊", price: 160 },
+  { id: "orangutini", name: "Orangutini Ananasini", emoji: "🦧🍍", price: 200 },
+  { id: "girafa", name: "Girafa Celeste", emoji: "🦒🌌", price: 250 },
 ];
 
 // Shop gear: slot is where it renders on the avatar.
