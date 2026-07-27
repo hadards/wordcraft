@@ -407,12 +407,13 @@ function renderMap() {
 let session = null;
 
 function startLevel(zone, levelIndex, words) {
+  const sig = SIG[zone.id];
   const rounds = [];
   words.forEach((w) => {
     if (wordStat(w.word).c < 3) rounds.push({ type: "intro", word: w });
-    rounds.push({ type: "mine", word: w });
+    rounds.push({ type: sig, word: w, mode: "listen" });
   });
-  shuffle(words).forEach((w) => rounds.push({ type: "kick", word: w }));
+  shuffle(words).forEach((w) => rounds.push({ type: sig, word: w, mode: "read" }));
   shuffle(words).slice(0, 2).forEach((w) => rounds.push({ type: "build", word: w }));
   rounds.push({ type: "echo", word: shuffle(words)[0] });
   session = { zone, levelIndex, rounds, i: 0, mistakes: 0, streak: 0, boss: false, requeued: {} };
@@ -420,9 +421,11 @@ function startLevel(zone, levelIndex, words) {
 }
 
 function startBoss(zone) {
+  const sig = SIG[zone.id];
   const words = shuffle(zone.words.slice().sort((a, b) => (wordStat(a.word).c - wordStat(a.word).w) - (wordStat(b.word).c - wordStat(b.word).w)).slice(0, 8));
-  const types = ["mine", "kick", "build"];
-  const rounds = words.map((w, i) => ({ type: types[i % 3], word: w }));
+  const rounds = words.map((w, i) => (
+    i % 3 === 2 ? { type: "build", word: w } : { type: sig, word: w, mode: i % 3 === 0 ? "listen" : "read" }
+  ));
   session = { zone, rounds, i: 0, mistakes: 0, streak: 0, boss: true, bossHp: rounds.length, bossMax: rounds.length, requeued: {} };
   beginSession();
 }
@@ -450,7 +453,7 @@ function nextRound() {
   const area = document.createElement("div");
   area.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;";
   stage.appendChild(area);
-  RENDER[round.type](round.word, area);
+  RENDER[round.type](round.word, area, round.mode || "listen");
 }
 
 // called by every mechanic on answer
@@ -475,10 +478,10 @@ function answered(round, ok, el) {
     s.mistakes++;
     sfx.wrong();
     // requeue this word+type once at the end (invisible spaced repetition)
-    const key = round.type + round.word.word;
+    const key = round.type + (round.mode || "") + round.word.word;
     if (!s.requeued[key]) {
       s.requeued[key] = true;
-      s.rounds.push({ type: round.type, word: round.word });
+      s.rounds.push({ type: round.type, word: round.word, mode: round.mode });
     }
   }
   save();
@@ -518,6 +521,17 @@ function speakBtn(word) {
 function distractors(word, zone, n) {
   return shuffle(zone.words.filter((w) => w.word !== word.word)).slice(0, n);
 }
+// listen mode: hear the word, find the picture. read mode: see the picture, find the written word.
+function optionLabel(opt, mode) {
+  return mode === "read" ? `<span class="word-tag">${opt.word.toUpperCase()}</span>` : `<span class="opt-emoji">${opt.emoji}</span>`;
+}
+function promptFor(word, mode, area) {
+  if (mode === "read") area.insertAdjacentHTML("beforeend", `<div class="read-prompt">${word.emoji}</div>`);
+  else area.appendChild(speakBtn(word.word));
+  setTimeout(() => speak(word.word), 600);
+}
+// each zone plays its own signature game
+const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap" };
 
 const RENDER = {
   // hear it, see it — auto-advances
@@ -530,10 +544,10 @@ const RENDER = {
     }), 350);
   },
 
-  // hear the word, smash through a wall of blocks with the pickaxe,
-  // find the hidden item and grab it — it flies into the chest
-  mine(word, area) {
-    const round = { type: "mine", word };
+  // smash through a wall of blocks with the pickaxe,
+  // find the hidden answer and grab it — it flies into the chest
+  mine(word, area, mode) {
+    const round = { type: "mine", word, mode };
     const options = [word, ...distractors(word, session.zone, 2)];
     const cellOrder = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     const itemCells = cellOrder.slice(0, 3);
@@ -567,7 +581,7 @@ const RENDER = {
             face.classList.add("smashed");
             sfx.crack();
             debris(e.clientX, e.clientY);
-            if (opt) behind.innerHTML = `<span class="reveal-item">${opt.emoji}</span>`;
+            if (opt) behind.innerHTML = `<span class="reveal-item">${optionLabel(opt, mode)}</span>`;
             else if (i === coinCell) {
               behind.innerHTML = `<span class="reveal-item">🪙</span>`;
               S.coins++;
@@ -597,18 +611,17 @@ const RENDER = {
       cell.appendChild(face);
       wall.appendChild(cell);
     }
-    area.appendChild(speakBtn(word.word));
+    promptFor(word, mode, area);
     area.appendChild(wall);
     area.appendChild(chest);
-    setTimeout(() => speak(word.word), 700);
     scheduleHint("mine", [...wall.children][itemCells[0]]);
   },
 
-  // see the picture, shoot the ball at the right written word
-  kick(word, area) {
-    const round = { type: "kick", word };
+  // shoot the ball at the right goal
+  kick(word, area, mode) {
+    const round = { type: "kick", word, mode };
     const options = shuffle([word, ...distractors(word, session.zone, 2)]);
-    area.innerHTML = `<div class="kick-prompt">${word.emoji}</div>`;
+    promptFor(word, mode, area);
     const goals = document.createElement("div");
     goals.className = "kick-goals";
     const ball = document.createElement("div");
@@ -620,7 +633,7 @@ const RENDER = {
       g.className = "kick-goal";
       g.setAttribute("role", "button");
       g.setAttribute("tabindex", "0");
-      g.innerHTML = `<div class="net"></div><div class="goal-word">${opt.word.toUpperCase()}</div>`;
+      g.innerHTML = `<div class="net"></div><div class="goal-word">${mode === "read" ? opt.word.toUpperCase() : opt.emoji}</div>`;
       const shoot = () => {
         if (done) return;
         const gr = g.getBoundingClientRect(), br = ball.getBoundingClientRect();
@@ -646,9 +659,142 @@ const RENDER = {
     });
     area.appendChild(goals);
     area.appendChild(ball);
-    setTimeout(() => speak(word.word), 600);
     const target = [...goals.children][options.findIndex((o) => o.word === word.word)];
     scheduleHint("kick", target);
+  },
+
+  // meadow: items fall from the sky — catch the right one in the basket
+  catch(word, area, mode) {
+    const round = { type: "catch", word, mode };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    const sky = document.createElement("div");
+    sky.className = "catch-sky";
+    const basket = document.createElement("div");
+    basket.className = "mine-chest";
+    basket.textContent = "🧺";
+    let done = false;
+    options.forEach((opt, i) => {
+      const it = document.createElement("button");
+      it.className = "fall-item";
+      it.innerHTML = optionLabel(opt, mode);
+      it.style.left = `${[12, 42, 72][i]}%`;
+      it.style.animationDuration = `${4.5 + i * 1.4}s`;
+      it.style.animationDelay = `${i * 1.5}s`;
+      it.onclick = () => {
+        if (done) return;
+        if (opt.word === word.word) {
+          done = true;
+          it.style.animationPlayState = "paused";
+          flyItem(it, basket, opt.emoji);
+          it.style.visibility = "hidden";
+          basket.classList.add("got");
+          answered(round, true, basket);
+        } else {
+          const inner = it.firstElementChild;
+          inner.classList.remove("nope"); void inner.offsetWidth; inner.classList.add("nope");
+          answered(round, false, it);
+          speak(word.word);
+        }
+      };
+      sky.appendChild(it);
+    });
+    promptFor(word, mode, area);
+    area.appendChild(sky);
+    area.appendChild(basket);
+  },
+
+  // ocean: items swim across the sea — catch the right one in the bucket
+  fish(word, area, mode) {
+    const round = { type: "fish", word, mode };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    const sea = document.createElement("div");
+    sea.className = "fish-sea";
+    const bucket = document.createElement("div");
+    bucket.className = "mine-chest";
+    bucket.textContent = "🪣";
+    for (let i = 0; i < 4; i++) {
+      const b = document.createElement("div");
+      b.className = "decor d-bubble";
+      b.textContent = "🫧";
+      b.style.left = `${10 + i * 24}%`;
+      b.style.top = "92%";
+      b.style.fontSize = "1.1rem";
+      b.style.animationDelay = `${i * 1.7}s`;
+      sea.appendChild(b);
+    }
+    let done = false;
+    options.forEach((opt, i) => {
+      const it = document.createElement("button");
+      it.className = "swim-item";
+      it.innerHTML = mode === "read"
+        ? `<span class="word-tag">${opt.word.toUpperCase()}</span>`
+        : `<span class="opt-emoji fish-flip">${opt.emoji}</span>`;
+      it.style.top = `${12 + i * 28}%`;
+      it.style.animationDuration = `${8 + i * 2.5}s`;
+      it.style.animationDelay = `${-i * 3.5}s`;
+      it.onclick = () => {
+        if (done) return;
+        if (opt.word === word.word) {
+          done = true;
+          it.style.animationPlayState = "paused";
+          flyItem(it, bucket, opt.emoji);
+          it.style.visibility = "hidden";
+          bucket.classList.add("got");
+          answered(round, true, bucket);
+        } else {
+          const inner = it.firstElementChild;
+          inner.classList.remove("nope"); void inner.offsetWidth; inner.classList.add("nope");
+          answered(round, false, it);
+          speak(word.word);
+        }
+      };
+      sea.appendChild(it);
+    });
+    promptFor(word, mode, area);
+    area.appendChild(sea);
+    area.appendChild(bucket);
+  },
+
+  // arcade: whack-a-word — answers pop out of neon holes, zap the right one while it's up
+  zap(word, area, mode) {
+    const round = { type: "zap", word, mode };
+    const options = shuffle([word, ...distractors(word, session.zone, 2)]);
+    const grid = document.createElement("div");
+    grid.className = "zap-grid";
+    const holes = [];
+    for (let i = 0; i < 6; i++) {
+      const h = document.createElement("div");
+      h.className = "zap-hole";
+      grid.appendChild(h);
+      holes.push(h);
+    }
+    let done = false;
+    const spots = shuffle(holes).slice(0, 3);
+    options.forEach((opt, i) => {
+      const it = document.createElement("button");
+      it.className = "zap-item";
+      it.innerHTML = optionLabel(opt, mode);
+      it.style.animationDuration = "3.9s";
+      it.style.animationDelay = `${i * 1.3}s`;
+      it.onclick = () => {
+        if (done || +getComputedStyle(it).opacity < 0.5) return;
+        if (opt.word === word.word) {
+          done = true;
+          it.classList.add("zapped");
+          const r = it.getBoundingClientRect();
+          debris(r.left + r.width / 2, r.top + r.height / 2);
+          answered(round, true, it);
+        } else {
+          const inner = it.firstElementChild;
+          inner.classList.remove("nope"); void inner.offsetWidth; inner.classList.add("nope");
+          answered(round, false, it);
+          speak(word.word);
+        }
+      };
+      spots[i].appendChild(it);
+    });
+    promptFor(word, mode, area);
+    area.appendChild(grid);
   },
 
   // hear the word, tap letter blocks in order to spell it

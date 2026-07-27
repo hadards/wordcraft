@@ -31,6 +31,12 @@ first (hear 2× + picture), then played.
 
 ## Mini-games
 
+Each zone has its own signature game (SIG map): meadow=Sky Catch, biome=Mine,
+stadium=Penalty Kick, ocean=Go Fish, arcade=Whack-a-Word. Every signature game
+has two modes: listen (hear word → pick picture) and read (see picture → pick
+written word). Sky Catch = items fall from the sky into a basket; Go Fish =
+items swim across the sea; Whack-a-Word = items pop out of neon holes.
+
 1. **Mine the Word** (listening) — word spoken; a 3×3 wall of dirt blocks, each
    takes 2 pickaxe hits (swing animation, crack stages, debris). The 3 items are
    hidden behind blocks — dig to discover them, grab the right one, it flies into
