@@ -1259,6 +1259,9 @@ if (location.hash === "#all") {
 // ---------- boot ----------
 $("title-mascot").innerHTML = MASCOT_HTML;
 $("game-mascot").innerHTML = MASCOT_HTML;
+// tease a few brainrot cards, in full color, peeking up from the bottom of the title screen
+$("title-preview").innerHTML = shuffle(BRAINROTS).slice(0, 5)
+  .map((br) => `<div class="peek-card">${brainrotArt(br, "peek-img")}</div>`).join("");
 $("btn-play").onclick = () => {
   audioCtx(); // unlock audio on the user gesture
   sfx.fanfare();
