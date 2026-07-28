@@ -41,6 +41,20 @@ SHEETS = [
         "many_eyed_blue", "four_eyed_cat", "red_devil", "apple_core",
         "green_alien", "spring_robot",
     ]),
+    # Series 2 (unlabeled sheet — names chosen from what's shown)
+    ("Gemini_Generated_Image_epk9jbepk9jbepk9.png", [
+        "skibidi_singer", "red_blob", "harlequin_jester", "burger_blob",
+        "huggy_blue", "creepy_baby",
+        "nyan_cat", "panicked_chef", "purple_kitten", "beep_boop_kid",
+        "buckle_finger", "sigma_face",
+    ]),
+    # Series 3 (labeled sheet — printed names)
+    ("Gemini_Generated_Image_q2c4azq2c4azq2c4.png", [
+        "gman_skibidi", "freddy", "caine", "ronald",
+        "green_banban", "kissy_missy",
+        "weg_weg_cat", "noise", "happy_happy_cat", "pico",
+        "waffle_host", "yes_chad",
+    ]),
 ]
 
 
