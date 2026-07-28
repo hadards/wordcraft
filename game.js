@@ -1136,7 +1136,7 @@ function renderShop() {
     const canBuy = !br.boss && S.coins >= br.price;
     const b = document.createElement("button");
     b.className = `block-btn shop-item brainrot-card${owned ? " owned" : ""}${!owned && !canBuy ? " cant" : ""}`;
-    b.innerHTML = `${owned ? brainrotArt(br, "br-img") : `<span class="br-emoji">❓</span>`}
+    b.innerHTML = `${brainrotArt(br, `br-img${owned ? "" : " locked"}`)}
       <span class="br-name">${owned ? br.name : br.boss ? "Beat the boss!" : "???"}</span>
       ${owned ? "" : `<span class="price">${br.boss ? "👑" : `${br.price} 🪙`}</span>`}`;
     b.onclick = () => {
