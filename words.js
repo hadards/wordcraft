@@ -5,7 +5,7 @@ const ZONES = [
     id: "meadow",
     name: "Starter Meadow",
     icon: "🌈",
-    boss: { name: "Campfire Buddy", img: "assets/brainrots/campfire_dog.png" },
+    boss: { name: "Campfire Buddy", img: "assets/brainrots/campfire_dog.png", rarity: "legendary", stats: { speed: 6, silly: 8, power: 9 } },
     words: [
       { word: "cat", emoji: "🐱" },
       { word: "dog", emoji: "🐶" },
@@ -25,7 +25,7 @@ const ZONES = [
     id: "biome",
     name: "Blocky Biome",
     icon: "⛏️",
-    boss: { name: "Steve", img: "assets/brainrots/minecraft_steve.png" },
+    boss: { name: "Steve", img: "assets/brainrots/minecraft_steve.png", rarity: "legendary", stats: { speed: 5, silly: 6, power: 10 } },
     words: [
       { word: "diamond", emoji: "💎" },
       { word: "sword", emoji: "🗡️" },
@@ -45,7 +45,7 @@ const ZONES = [
     id: "stadium",
     name: "Super Stadium",
     icon: "⚽",
-    boss: { name: "Blocky Miner", img: "assets/brainrots/roblox_miner.png" },
+    boss: { name: "Blocky Miner", img: "assets/brainrots/roblox_miner.png", rarity: "legendary", stats: { speed: 7, silly: 5, power: 9 } },
     words: [
       { word: "ball", emoji: "⚽" },
       { word: "goal", emoji: "🥅" },
@@ -65,7 +65,7 @@ const ZONES = [
     id: "ocean",
     name: "Ocean World",
     icon: "🌊",
-    boss: { name: "Splash", img: "assets/brainrots/water_drop.png" },
+    boss: { name: "Splash", img: "assets/brainrots/water_drop.png", rarity: "legendary", stats: { speed: 9, silly: 7, power: 7 } },
     words: [
       { word: "shark", emoji: "🦈" },
       { word: "whale", emoji: "🐋" },
@@ -85,7 +85,7 @@ const ZONES = [
     id: "arcade",
     name: "Neon Arcade",
     icon: "🕹️",
-    boss: { name: "Gameboy Buddy", img: "assets/brainrots/gameboy_buddy.png" },
+    boss: { name: "Gameboy Buddy", img: "assets/brainrots/gameboy_buddy.png", rarity: "legendary", stats: { speed: 8, silly: 9, power: 6 } },
     words: [
       { word: "jump", emoji: "🦘" },
       { word: "play", emoji: "🎮" },
@@ -106,7 +106,7 @@ const ZONES = [
     id: "brainrot",
     name: "Brainrot Land",
     icon: "🧠",
-    boss: { name: "Troll Face", img: "assets/brainrots/troll_face.png" },
+    boss: { name: "Troll Face", img: "assets/brainrots/troll_face.png", rarity: "legendary", stats: { speed: 10, silly: 10, power: 8 } },
     words: [
       { word: "banana", emoji: "🍌" },
       { word: "monkey", emoji: "🐵" },
@@ -124,9 +124,33 @@ const ZONES = [
   },
 ];
 
+// Rarity tiers by price band, matching a Steal-a-Brainrot-style ladder.
+// Bosses (in ZONES above) are always Legendary regardless of price.
+function rarityForPrice(price) {
+  if (price < 50) return "common";
+  if (price < 90) return "rare";
+  if (price < 130) return "epic";
+  return "legendary";
+}
+const RARITY_INFO = {
+  common: { label: "Common", stars: 1 },
+  rare: { label: "Rare", stars: 2 },
+  epic: { label: "Epic", stars: 3 },
+  legendary: { label: "Legendary", stars: 4 },
+};
+// Fixed flavor stats per character (1-10). Deterministic seed from price so
+// every card has a stable, distinct-feeling stat block without hand-tuning 36
+// entries; a few characters get hand-picked stats where it's funnier/on-model.
+function statsForPrice(price, seed) {
+  const speed = 3 + (seed % 7);
+  const silly = 4 + ((seed * 3) % 6);
+  const power = 2 + Math.floor(price / 20) % 8;
+  return { speed: Math.min(10, speed), silly: Math.min(10, silly), power: Math.min(10, power) };
+}
+
 // Brainrot collection: bosses (in ZONES above) are stolen by beating them;
 // these are bought with coins. Prices follow rarity, like in Steal a Brainrot.
-const BRAINROTS = [
+const BRAINROTS_RAW = [
   { id: "sushi", name: "Sushi Pal", img: "assets/brainrots/sushi_dumpling.png", price: 30 },
   { id: "toiletpaper", name: "TP Twins", img: "assets/brainrots/toilet_paper_twins.png", price: 35 },
   { id: "shibadoge", name: "Much Brain Doggo", img: "assets/brainrots/much_brain_doggo.png", price: 45 },
@@ -159,6 +183,11 @@ const BRAINROTS = [
   { id: "greenalien", name: "Green Alien", img: "assets/brainrots/green_alien.png", price: 135 },
   { id: "springrobot", name: "Spring Robot", img: "assets/brainrots/spring_robot.png", price: 145 },
 ];
+const BRAINROTS = BRAINROTS_RAW.map((b, i) => ({
+  ...b,
+  rarity: rarityForPrice(b.price),
+  stats: statsForPrice(b.price, b.price + i * 7),
+}));
 
 // Shop gear: slot is where it renders on the avatar.
 const GEAR = [

@@ -189,6 +189,25 @@ function celebrate(html, ms, onDone) {
   confetti();
   setTimeout(() => { el.classList.add("hidden"); if (onDone) onDone(); }, ms);
 }
+// pack-opening moment: card flies in, spins, settles — rarity-colored burst
+function revealNewCard(br, rarity, onDone) {
+  const el = $("celebrate");
+  el.innerHTML = `
+    <div class="pack-reveal rarity-${rarity}">
+      <div class="pack-burst"></div>
+      <div class="pack-card">
+        <div class="tcard-art">${brainrotArt(br, "tcard-img")}</div>
+        <div class="tcard-rarity-tag">${RARITY_INFO[rarity].label}</div>
+        <div class="tcard-name">${br.name}</div>
+      </div>
+    </div>
+    <div class="celebrate-text">${br.name.toUpperCase()}!</div>`;
+  el.classList.remove("hidden");
+  sfx.fanfare();
+  confetti();
+  speak(`You got ${br.name}!`);
+  setTimeout(() => { el.classList.add("hidden"); if (onDone) onDone(); }, 2600);
+}
 function reward(el, { coins = 2, xp = 5 } = {}) {
   if (session && session.streak >= 3) coins *= 2;
   S.coins += coins;
@@ -638,11 +657,16 @@ function endSession() {
     }
     zs.boss = true;
     S.coins += 50;
-    if (!S.brainrots.includes(s.zone.boss.name)) S.brainrots.push(s.zone.boss.name);
+    const alreadyOwned = S.brainrots.includes(s.zone.boss.name);
+    if (!alreadyOwned) S.brainrots.push(s.zone.boss.name);
     save();
-    sfx.fanfare();
-    celebrate(`<div class="celebrate-big">${brainrotArt(s.zone.boss, "celebrate-img")}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
-    speak(`You got ${s.zone.boss.name}! Amazing!`);
+    if (alreadyOwned) {
+      sfx.fanfare();
+      celebrate(`<div class="celebrate-big">${brainrotArt(s.zone.boss, "celebrate-img")}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
+      speak(`You got ${s.zone.boss.name}! Amazing!`);
+    } else {
+      revealNewCard(s.zone.boss, s.zone.boss.rarity || "legendary", renderMap);
+    }
   } else {
     const stars = s.mistakes === 0 ? 3 : s.mistakes <= 2 ? 2 : 1;
     zs.stars[s.levelIndex] = Math.max(zs.stars[s.levelIndex] || 0, stars);
@@ -1118,10 +1142,15 @@ function addBuiltWord(word) {
   if (row) row.innerHTML = builtWords.map((w) => `<span class="built-word">${w.emoji} ${w.word.toUpperCase()}</span>`).join("");
 }
 
-// ---------- shop & brainrot collection ----------
+// ---------- shop & brainrot card collection ----------
 function bossBrainrots() {
-  return ZONES.map((z) => ({ id: z.id + "-boss", name: z.boss.name, img: z.boss.img, emoji: z.boss.emoji, boss: true }));
+  return ZONES.map((z) => ({
+    id: z.id + "-boss", name: z.boss.name, img: z.boss.img,
+    rarity: z.boss.rarity || "legendary", stats: z.boss.stats, boss: true,
+  }));
 }
+const STAT_ICONS = { speed: "⚡", silly: "😜", power: "💪" };
+
 function renderShop() {
   show("screen-shop");
   renderHUD();
@@ -1129,35 +1158,62 @@ function renderShop() {
   const grid = $("shop-items");
   grid.innerHTML = "";
 
-  // brainrot collection: bosses are stolen by beating them, the rest are bought
-  grid.insertAdjacentHTML("beforeend", `<div class="shop-title">🧠 BRAINROTS</div>`);
-  [...bossBrainrots(), ...BRAINROTS].forEach((br) => {
+  // brainrot card collection: bosses are stolen by beating them, the rest are bought
+  const all = [...bossBrainrots(), ...BRAINROTS];
+  const ownedCount = all.filter((br) => S.brainrots.includes(br.name)).length;
+  grid.insertAdjacentHTML("beforeend",
+    `<div class="shop-title">🧠 BRAINROTS <span class="collect-count">${ownedCount} / ${all.length}</span></div>`);
+  grid.insertAdjacentHTML("beforeend", '<div class="card-grid" id="card-grid"></div>');
+  const cardGrid = $("card-grid");
+
+  all.forEach((br) => {
     const owned = S.brainrots.includes(br.name);
     const canBuy = !br.boss && S.coins >= br.price;
-    const b = document.createElement("button");
-    b.className = `block-btn shop-item brainrot-card${owned ? " owned" : ""}${!owned && !canBuy ? " cant" : ""}`;
-    b.innerHTML = `${brainrotArt(br, `br-img${owned ? "" : " locked"}`)}
-      <span class="br-name">${owned ? br.name : br.boss ? "Beat the boss!" : "???"}</span>
-      ${owned ? "" : `<span class="price">${br.boss ? "👑" : `${br.price} 🪙`}</span>`}`;
-    b.onclick = () => {
-      if (owned) {
-        // tapping your brainrot says its name — the whole point
+    const rarity = br.rarity || "common";
+    const wrap = document.createElement("div");
+    wrap.className = `tcard-wrap rarity-${rarity}`;
+    const statsHTML = br.stats
+      ? Object.entries(br.stats).map(([k, v]) => `<span class="stat"><i>${STAT_ICONS[k] || "★"}</i>${v}</span>`).join("")
+      : "";
+    wrap.innerHTML = `
+      <div class="tcard ${owned ? "flippable" : ""}">
+        <div class="tcard-face tcard-front">
+          ${owned
+            ? `<div class="tcard-art">${brainrotArt(br, "tcard-img")}</div>
+               <div class="tcard-rarity-tag">${RARITY_INFO[rarity].label}</div>
+               <div class="tcard-name">${br.name}</div>`
+            : `<div class="tcard-art">${brainrotArt(br, "tcard-img locked")}</div>
+               <div class="tcard-lock">❓</div>
+               <div class="tcard-name">${br.boss ? "Beat the boss!" : "???"}</div>
+               ${!br.boss ? `<div class="tcard-price">${br.price} 🪙</div>` : `<div class="tcard-price">👑</div>`}`}
+        </div>
+        <div class="tcard-face tcard-back">
+          <div class="tcard-back-name">${br.name}</div>
+          <div class="tcard-stats">${statsHTML}</div>
+          <div class="tcard-back-rarity">${RARITY_INFO[rarity].label}</div>
+        </div>
+      </div>`;
+    const cardEl = wrap.querySelector(".tcard");
+    if (owned) {
+      cardEl.onclick = () => {
         sfx.pop();
-        b.classList.remove("got"); void b.offsetWidth; b.classList.add("got");
+        cardEl.classList.toggle("flipped");
         speak(br.name, { rate: 0.95 });
-      } else if (!br.boss && canBuy) {
-        S.coins -= br.price;
-        S.brainrots.push(br.name);
-        sfx.fanfare();
-        confetti();
-        speak(`You got ${br.name}!`);
-        save();
-        renderShop();
-      } else {
-        sfx.wrong();
-      }
-    };
-    grid.appendChild(b);
+      };
+    } else {
+      cardEl.classList.toggle("cant", !br.boss && !canBuy);
+      cardEl.onclick = () => {
+        if (!br.boss && canBuy) {
+          S.coins -= br.price;
+          S.brainrots.push(br.name);
+          save();
+          revealNewCard(br, rarity, () => renderShop());
+        } else {
+          sfx.wrong();
+        }
+      };
+    }
+    cardGrid.appendChild(wrap);
   });
 
   grid.insertAdjacentHTML("beforeend", `<div class="shop-title">🎽 GEAR</div>`);
