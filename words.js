@@ -5,7 +5,7 @@ const ZONES = [
     id: "meadow",
     name: "Starter Meadow",
     icon: "🌈",
-    boss: { name: "Chimpanzini Bananini", emoji: "🐵🍌" },
+    boss: { name: "Campfire Buddy", img: "assets/brainrots/campfire_dog.png" },
     words: [
       { word: "cat", emoji: "🐱" },
       { word: "dog", emoji: "🐶" },
@@ -25,7 +25,7 @@ const ZONES = [
     id: "biome",
     name: "Blocky Biome",
     icon: "⛏️",
-    boss: { name: "Bombardiro Crocodilo", emoji: "🐊✈️" },
+    boss: { name: "Steve", img: "assets/brainrots/minecraft_steve.png" },
     words: [
       { word: "diamond", emoji: "💎" },
       { word: "sword", emoji: "🗡️" },
@@ -45,7 +45,7 @@ const ZONES = [
     id: "stadium",
     name: "Super Stadium",
     icon: "⚽",
-    boss: { name: "Tung Tung Tung Sahur", emoji: "🪵🥁" },
+    boss: { name: "Blocky Miner", img: "assets/brainrots/roblox_miner.png" },
     words: [
       { word: "ball", emoji: "⚽" },
       { word: "goal", emoji: "🥅" },
@@ -65,7 +65,7 @@ const ZONES = [
     id: "ocean",
     name: "Ocean World",
     icon: "🌊",
-    boss: { name: "Tralalero Tralala", emoji: "🦈👟" },
+    boss: { name: "Splash", img: "assets/brainrots/water_drop.png" },
     words: [
       { word: "shark", emoji: "🦈" },
       { word: "whale", emoji: "🐋" },
@@ -85,7 +85,7 @@ const ZONES = [
     id: "arcade",
     name: "Neon Arcade",
     icon: "🕹️",
-    boss: { name: "Cappuccino Assassino", emoji: "☕🥷" },
+    boss: { name: "Gameboy Buddy", img: "assets/brainrots/gameboy_buddy.png" },
     words: [
       { word: "jump", emoji: "🦘" },
       { word: "play", emoji: "🎮" },
@@ -106,7 +106,7 @@ const ZONES = [
     id: "brainrot",
     name: "Brainrot Land",
     icon: "🧠",
-    boss: { name: "Vaca Saturno Saturnita", emoji: "🐮🪐" },
+    boss: { name: "Troll Face", img: "assets/brainrots/troll_face.png" },
     words: [
       { word: "banana", emoji: "🍌" },
       { word: "monkey", emoji: "🐵" },
@@ -124,17 +124,40 @@ const ZONES = [
   },
 ];
 
-// Brainrot collection: bosses are stolen by beating them; these are bought with coins.
-// Prices follow rarity, like in Steal a Brainrot.
+// Brainrot collection: bosses (in ZONES above) are stolen by beating them;
+// these are bought with coins. Prices follow rarity, like in Steal a Brainrot.
 const BRAINROTS = [
-  { id: "patapim", name: "Brr Brr Patapim", emoji: "🌳🐒", price: 40 },
-  { id: "ambalabu", name: "Boneca Ambalabu", emoji: "🐸🛞", price: 60 },
-  { id: "trippi", name: "Trippi Troppi", emoji: "🐱🦐", price: 80 },
-  { id: "larila", name: "Lirili Larila", emoji: "🐘🌵", price: 100 },
-  { id: "ballerina", name: "Ballerina Cappuccina", emoji: "🩰☕", price: 130 },
-  { id: "frigo", name: "Frigo Camelo", emoji: "🐫🧊", price: 160 },
-  { id: "orangutini", name: "Orangutini Ananasini", emoji: "🦧🍍", price: 200 },
-  { id: "girafa", name: "Girafa Celeste", emoji: "🦒🌌", price: 250 },
+  { id: "sushi", name: "Sushi Pal", img: "assets/brainrots/sushi_dumpling.png", price: 30 },
+  { id: "toiletpaper", name: "TP Twins", img: "assets/brainrots/toilet_paper_twins.png", price: 35 },
+  { id: "shibadoge", name: "Much Brain Doggo", img: "assets/brainrots/much_brain_doggo.png", price: 45 },
+  { id: "mushroomcat", name: "Mushroom Cat", img: "assets/brainrots/rainbow_mushroom_cat.png", price: 55 },
+  { id: "avocado", name: "Sad Avocado", img: "assets/brainrots/sad_avocado.png", price: 60 },
+  { id: "amongus", name: "Sus Red", img: "assets/brainrots/among_us_red.png", price: 70 },
+  { id: "purpleblob", name: "Purple Blob", img: "assets/brainrots/purple_blob.png", price: 75 },
+  { id: "spaghetticat", name: "Spaghetti Cat", img: "assets/brainrots/spaghetti_cat.png", price: 80 },
+  { id: "boba", name: "Boba Buddy", img: "assets/brainrots/boba_tea.png", price: 90 },
+  { id: "campfiredog", name: "Campfire Dog", img: "assets/brainrots/campfire_dog.png", price: 40 },
+  { id: "rainbowjelly", name: "Rainbow Jelly", img: "assets/brainrots/rainbow_jelly.png", price: 50 },
+  { id: "wingedcat", name: "Winged Cat", img: "assets/brainrots/winged_cat.png", price: 100 },
+  { id: "letterb", name: "Letter B", img: "assets/brainrots/letter_b_eyes.png", price: 25 },
+  { id: "mushroomfam", name: "Mushroom Family", img: "assets/brainrots/mushroom_family.png", price: 65 },
+  { id: "frankenstein", name: "Frankie", img: "assets/brainrots/frankenstein.png", price: 110 },
+  { id: "binaryghost", name: "Binary Ghost", img: "assets/brainrots/binary_ghost.png", price: 120 },
+  { id: "oneeyealien", name: "One-Eye Alien", img: "assets/brainrots/one_eye_alien.png", price: 95 },
+  { id: "cassettebot", name: "Cassette Bot", img: "assets/brainrots/cassette_bot.png", price: 130 },
+  { id: "lightbulb", name: "Bright Idea", img: "assets/brainrots/lightbulb_head.png", price: 140 },
+  { id: "hearteye", name: "Heart Eye Blob", img: "assets/brainrots/heart_eye_blob.png", price: 85 },
+  { id: "worm", name: "Wiggly Worm", img: "assets/brainrots/green_worm.png", price: 35 },
+  { id: "bluebear", name: "Blue Bear", img: "assets/brainrots/blue_bear.png", price: 105 },
+  { id: "manyeyedmouth", name: "Big Mouth", img: "assets/brainrots/many_eyed_mouth.png", price: 150 },
+  { id: "lettera", name: "Letter A", img: "assets/brainrots/letter_a.png", price: 25 },
+  { id: "trollpanda", name: "Troll Panda", img: "assets/brainrots/troll_panda.png", price: 160 },
+  { id: "manyeyedblue", name: "Spooky Blue", img: "assets/brainrots/many_eyed_blue.png", price: 170 },
+  { id: "foureyedcat", name: "Four-Eyed Cat", img: "assets/brainrots/four_eyed_cat.png", price: 115 },
+  { id: "reddevil", name: "Little Devil", img: "assets/brainrots/red_devil.png", price: 125 },
+  { id: "applecore", name: "Apple Core", img: "assets/brainrots/apple_core.png", price: 45 },
+  { id: "greenalien", name: "Green Alien", img: "assets/brainrots/green_alien.png", price: 135 },
+  { id: "springrobot", name: "Spring Robot", img: "assets/brainrots/spring_robot.png", price: 145 },
 ];
 
 // Shop gear: slot is where it renders on the avatar.

@@ -525,7 +525,7 @@ function renderMap() {
     const [bx, by] = pts[levels.length];
     addNode(bx, by,
       `boss-node ${zs.boss ? "done" : ""}${bossNext ? " next" : ""}${unlocked && allDone ? "" : " locked-node"}`,
-      zs.boss ? "🏆" : unlocked && allDone ? zone.boss.emoji : "🔒",
+      zs.boss ? "🏆" : unlocked && allDone ? brainrotArt(zone.boss, "node-boss-img") : "🔒",
       () => { sfx.pop(); startBoss(zone); });
     z.insertAdjacentHTML("beforeend", `<div class="terrain"></div>`);
     z.appendChild(inner);
@@ -585,7 +585,7 @@ function nextRound() {
   stage.classList.toggle("on-fire", s.streak >= 3);
   if (s.boss) {
     const hearts = Array.from({ length: s.bossMax }, (_, i) => `<span class="${i < s.bossHp ? "" : "lost"}">❤️</span>`).join("");
-    stage.innerHTML = `<div class="boss-emoji" id="boss-emoji">${s.zone.boss.emoji}</div><div class="boss-hp">${hearts}</div>`;
+    stage.innerHTML = `<div class="boss-emoji" id="boss-emoji">${brainrotArt(s.zone.boss)}</div><div class="boss-hp">${hearts}</div>`;
   }
   const area = document.createElement("div");
   area.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;";
@@ -631,7 +631,7 @@ function endSession() {
   if (s.boss) {
     if (s.bossHp > 0) {
       // skipped through the fight — boss survives, no steal
-      celebrate(`<div class="celebrate-big">${s.zone.boss.emoji}</div><div class="celebrate-text">TRY AGAIN!</div>`, 2000, renderMap);
+      celebrate(`<div class="celebrate-big">${brainrotArt(s.zone.boss, "celebrate-img")}</div><div class="celebrate-text">TRY AGAIN!</div>`, 2000, renderMap);
       speak("Almost! Try again!");
       session = null;
       return;
@@ -641,7 +641,7 @@ function endSession() {
     if (!S.brainrots.includes(s.zone.boss.name)) S.brainrots.push(s.zone.boss.name);
     save();
     sfx.fanfare();
-    celebrate(`<div class="celebrate-big">${s.zone.boss.emoji}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
+    celebrate(`<div class="celebrate-big">${brainrotArt(s.zone.boss, "celebrate-img")}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
     speak(`You got ${s.zone.boss.name}! Amazing!`);
   } else {
     const stars = s.mistakes === 0 ? 3 : s.mistakes <= 2 ? 2 : 1;
@@ -678,6 +678,12 @@ function promptFor(word, mode, area) {
 }
 // each zone plays its own signature game
 const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo" };
+
+// bosses/brainrots render either an illustrated image or, if none is set, an emoji fallback
+function brainrotArt(obj, cls = "") {
+  if (obj.img) return `<img class="brainrot-img ${cls}" src="${obj.img}" alt="${obj.name}">`;
+  return `<span class="${cls}">${obj.emoji || "❓"}</span>`;
+}
 
 const RENDER = {
   // hear it, see it — auto-advances (guarded so a skip mid-intro can't double-advance)
@@ -1114,7 +1120,7 @@ function addBuiltWord(word) {
 
 // ---------- shop & brainrot collection ----------
 function bossBrainrots() {
-  return ZONES.map((z) => ({ id: z.id + "-boss", name: z.boss.name, emoji: z.boss.emoji, boss: true }));
+  return ZONES.map((z) => ({ id: z.id + "-boss", name: z.boss.name, img: z.boss.img, emoji: z.boss.emoji, boss: true }));
 }
 function renderShop() {
   show("screen-shop");
@@ -1130,7 +1136,7 @@ function renderShop() {
     const canBuy = !br.boss && S.coins >= br.price;
     const b = document.createElement("button");
     b.className = `block-btn shop-item brainrot-card${owned ? " owned" : ""}${!owned && !canBuy ? " cant" : ""}`;
-    b.innerHTML = `<span class="br-emoji">${owned ? br.emoji : "❓"}</span>
+    b.innerHTML = `${owned ? brainrotArt(br, "br-img") : `<span class="br-emoji">❓</span>`}
       <span class="br-name">${owned ? br.name : br.boss ? "Beat the boss!" : "???"}</span>
       ${owned ? "" : `<span class="price">${br.boss ? "👑" : `${br.price} 🪙`}</span>`}`;
     b.onclick = () => {
