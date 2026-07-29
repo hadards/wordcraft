@@ -276,7 +276,7 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
     #551b6e 3500px, #a1247e 3800px, #d63384 100%);
   padding-bottom: 70px;
 }
-.zone { position: relative; height: 600px; }
+.zone { position: relative; height: 750px; }
 .zone-inner { position: relative; max-width: 560px; height: 100%; margin: 0 auto; }
 .zone-banner {
   position: absolute;
@@ -1182,6 +1182,7 @@ body::after {
 .zone-ocean .terrain   { --t1: #08466e; --t2: #063a5e; }
 .zone-arcade .terrain  { --t1: #2a1b54; --t2: #231647; }
 .zone-brainrot .terrain{ --t1: #7a1f4e; --t2: #6b1a44; }
+.zone-mix .terrain     { --t1: #1e6b52; --t2: #175a44; }
 #stage-ground {
   position: fixed;
   left: 0; right: 0; bottom: 0;
@@ -1197,6 +1198,7 @@ body.theme-stadium #stage-ground { --t1: #22304f; --t2: #1c2843; }
 body.theme-ocean #stage-ground   { --t1: #08466e; --t2: #063a5e; }
 body.theme-arcade #stage-ground  { --t1: #2a1b54; --t2: #231647; }
 body.theme-brainrot #stage-ground{ --t1: #7a1f4e; --t2: #6b1a44; }
+body.theme-mix #stage-ground     { --t1: #1e6b52; --t2: #175a44; }
 #stage { padding-bottom: 56px; }
 .mascot.corner { bottom: 50px; }
 
@@ -1250,6 +1252,7 @@ body.theme-stadium { background-image: linear-gradient(rgba(0,0,0,.4), rgba(0,0,
 body.theme-ocean   { background-image: linear-gradient(rgba(0,20,50,.35), rgba(0,20,50,.5)), url("assets/backgrounds/ocean.jpg"); }
 body.theme-arcade  { background-image: linear-gradient(rgba(10,0,35,.5), rgba(10,0,35,.65)), url("assets/backgrounds/arcade.jpg"); }
 body.theme-brainrot { background-image: linear-gradient(rgba(50,0,50,.35), rgba(50,0,50,.5)), url("assets/backgrounds/brainrot.jpg"); }
+body.theme-mix { background-image: linear-gradient(rgba(20,60,50,.45), rgba(20,60,50,.6)), url("assets/backgrounds/arcade.jpg"); }
 body[class*="theme-"] #stage { color: #fff; }
 body[class*="theme-"] .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
 body[class*="theme-"] .built-row .built-word { border-radius: 0; }
@@ -1269,6 +1272,7 @@ body[class*="theme-"] .built-row .built-word { border-radius: 0; }
 .zone-ocean    { background-image: linear-gradient(rgba(0,20,40,.15), rgba(0,20,40,.15)), url("assets/backgrounds/ocean.jpg"); }
 .zone-arcade   { background-image: linear-gradient(rgba(10,0,30,.35), rgba(10,0,30,.35)), url("assets/backgrounds/arcade.jpg"); }
 .zone-brainrot { background-image: linear-gradient(rgba(40,0,40,.15), rgba(40,0,40,.15)), url("assets/backgrounds/brainrot.jpg"); }
+.zone-mix { background-image: linear-gradient(rgba(10,40,30,.25), rgba(10,40,30,.25)), url("assets/backgrounds/arcade.jpg"); }
 .map-path path { stroke-dasharray: 6 10; stroke-linecap: butt; stroke-width: 6; }
 
 #btn-skip {

@@ -21,6 +21,18 @@ const save = () => localStorage.setItem(SAVE_KEY, JSON.stringify(S));
 
 const $ = (id) => document.getElementById(id);
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+// Random Mix is a review zone: pull 16 words from every other zone once at
+// boot, deduped by word text so its own games (distractors, spelling, etc.)
+// behave like any static zone — everything downstream just reads zone.words.
+(() => {
+  const mix = ZONES.find((z) => z.id === "mix");
+  if (!mix) return;
+  const pool = ZONES.filter((z) => z.id !== "mix").flatMap((z) => z.words);
+  const seen = new Set();
+  const unique = shuffle(pool).filter((w) => (seen.has(w.word) ? false : seen.add(w.word)));
+  mix.words = unique.slice(0, 16);
+})();
 const chunk = (a, n) => { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; };
 const wordStat = (w) => S.words[w] || { c: 0, w: 0 };
 const zoneState = (id) => S.zones[id] || (S.zones[id] = { stars: [], boss: false });
@@ -342,7 +354,7 @@ function hintDone(mechanic) {
 
 // ---------- world map ----------
 const LEVEL_SIZE = 4;
-const NODE_POS = [[26, 26], [71, 42], [27, 62], [68, 84]]; // 3 levels + boss, zigzag
+const NODE_POS = [[26, 20], [71, 35], [27, 52], [71, 68], [27, 85]]; // 4 levels + boss, zigzag
 // pixel kid sprite (yellow helmet, red sneakers) drawn as box-shadow art
 const KID_ART = [
   "..YYYYYY..",
@@ -414,6 +426,14 @@ const DECOR = {
     { e: "🪐", x: 88, y: 52, c: "d-float", s: 1.9 },
     { e: "✨", x: 48, y: 12, c: "d-sparkle", s: 1.5 },
     { e: "🐊✈️", x: 30, y: 44, c: "d-drift", s: 1.5 },
+  ],
+  mix: [
+    { e: "🎲", x: 8, y: 16, c: "d-float", s: 2 },
+    { e: "🎲", x: 88, y: 30, c: "d-sway", s: 1.6 },
+    { e: "✨", x: 50, y: 10, c: "d-sparkle", s: 1.5 },
+    { e: "🌈", x: 12, y: 60, c: "d-float", s: 1.9 },
+    { e: "⭐", x: 85, y: 70, c: "d-sparkle", s: 1.4 },
+    { e: "🎉", x: 40, y: 85, c: "d-sway", s: 1.7 },
   ],
 };
 
@@ -748,7 +768,7 @@ function promptFor(word, mode, area) {
   setTimeout(() => speak(word.word), 600);
 }
 // each zone plays its own signature game
-const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo" };
+const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo", mix: "zap" };
 
 // bosses/brainrots render either an illustrated image or, if none is set, an emoji fallback
 function brainrotArt(obj, cls = "") {

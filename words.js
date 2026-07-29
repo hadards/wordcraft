@@ -19,6 +19,10 @@ const ZONES = [
       { word: "one", emoji: "1️⃣" },
       { word: "two", emoji: "2️⃣" },
       { word: "three", emoji: "3️⃣" },
+      { word: "duck", emoji: "🦆" },
+      { word: "bee", emoji: "🐝" },
+      { word: "flower", emoji: "🌸" },
+      { word: "yellow", emoji: "🟡" },
     ],
   },
   {
@@ -39,6 +43,10 @@ const ZONES = [
       { word: "fire", emoji: "🔥" },
       { word: "egg", emoji: "🥚" },
       { word: "gold", emoji: "🪙" },
+      { word: "pickaxe", emoji: "⛏️" },
+      { word: "ladder", emoji: "🪜" },
+      { word: "chest", emoji: "🧰" },
+      { word: "lava", emoji: "🌋" },
     ],
   },
   {
@@ -59,6 +67,10 @@ const ZONES = [
       { word: "king", emoji: "👑" },
       { word: "hand", emoji: "✋" },
       { word: "win", emoji: "🥇" },
+      { word: "team", emoji: "👥" },
+      { word: "whistle", emoji: "🎺" },
+      { word: "jersey", emoji: "👕" },
+      { word: "coach", emoji: "🧑‍🏫" },
     ],
   },
   {
@@ -79,6 +91,10 @@ const ZONES = [
       { word: "swim", emoji: "🏊" },
       { word: "sand", emoji: "🏖️" },
       { word: "dive", emoji: "🤿" },
+      { word: "jellyfish", emoji: "🪼" },
+      { word: "octopus", emoji: "🐙" },
+      { word: "starfish", emoji: "⭐" },
+      { word: "coral", emoji: "🪸" },
     ],
   },
   {
@@ -99,6 +115,10 @@ const ZONES = [
       { word: "magic", emoji: "🪄" },
       { word: "ghost", emoji: "👻" },
       { word: "candy", emoji: "🍬" },
+      { word: "button", emoji: "🔘" },
+      { word: "trophy", emoji: "🏆" },
+      { word: "level", emoji: "🎚️" },
+      { word: "prize", emoji: "🎁" },
     ],
   },
   {
@@ -120,7 +140,20 @@ const ZONES = [
       { word: "elephant", emoji: "🐘" },
       { word: "cactus", emoji: "🌵" },
       { word: "camel", emoji: "🐫" },
+      { word: "robot", emoji: "🦾" },
+      { word: "clock", emoji: "🕐" },
+      { word: "phone", emoji: "📱" },
+      { word: "crown", emoji: "👑" },
     ],
+  },
+  {
+    // final review zone: words are drawn at random from every other zone at
+    // render time (see buildMixWords in game.js) rather than fixed here
+    id: "mix",
+    name: "Random Mix",
+    icon: "🎲",
+    boss: { name: "Sigma Face", img: "assets/brainrots/sigma_face.png", rarity: "legendary", stats: { speed: 9, silly: 6, power: 10 } },
+    words: [],
   },
 ];
 
@@ -194,7 +227,6 @@ const BRAINROTS_RAW = [
   { id: "purplekitten", name: "Purple Kitten", img: "assets/brainrots/purple_kitten.png", price: 55 },
   { id: "beepboopkid", name: "Beep Boop Kid", img: "assets/brainrots/beep_boop_kid.png", price: 95 },
   { id: "bucklefinger", name: "Buckle Finger", img: "assets/brainrots/buckle_finger.png", price: 60 },
-  { id: "sigmaface", name: "Sigma Face", img: "assets/brainrots/sigma_face.png", price: 190 },
   // Series 3 (printed names from the sheet)
   { id: "gmanskibidi", name: "G-Man Skibidi", img: "assets/brainrots/gman_skibidi.png", price: 160 },
   { id: "freddy", name: "Freddy", img: "assets/brainrots/freddy.png", price: 175 },
