@@ -354,7 +354,7 @@ function hintDone(mechanic) {
 
 // ---------- world map ----------
 const LEVEL_SIZE = 4;
-const NODE_POS = [[26, 20], [71, 35], [27, 52], [71, 68], [27, 85]]; // 4 levels + boss, zigzag
+const NODE_POS = [[26, 14], [71, 26], [27, 40], [71, 53], [27, 67], [71, 80], [27, 92]]; // up to 6 levels + boss, zigzag
 // pixel kid sprite (yellow helmet, red sneakers) drawn as box-shadow art
 const KID_ART = [
   "..YYYYYY..",
@@ -379,6 +379,15 @@ const KID_SHADOWS = KID_ART.flatMap((row, y) =>
 const kidHTML = () => `<div class="pixel-kid"><i style="box-shadow:${KID_SHADOWS}"></i></div>`;
 const MASCOT_HTML = `<div class="mascot-body as-kid">${kidHTML()}</div>`;
 const DECOR = {
+  abc: [
+    { e: "🔤", x: 8, y: 10, c: "d-float", s: 2 },
+    { e: "✏️", x: 88, y: 20, c: "d-sway", s: 1.8 },
+    { e: "📚", x: 10, y: 45, c: "d-float", s: 1.9 },
+    { e: "🍎", x: 86, y: 55, c: "d-sway", s: 1.6 },
+    { e: "✨", x: 50, y: 8, c: "d-sparkle", s: 1.4 },
+    { e: "🎈", x: 14, y: 78, c: "d-float", s: 1.7 },
+    { e: "⭐", x: 84, y: 88, c: "d-sparkle", s: 1.5 },
+  ],
   meadow: [
     { e: "☀️", x: 6, y: 8, c: "d-sway", s: 3 },
     { e: "☁️", x: 0, y: 15, c: "d-drift", s: 2.6 },
@@ -549,7 +558,7 @@ function renderMap() {
   world.id = "map-world";
   ZONES.forEach((zone, zi) => {
     const zs = zoneState(zone.id);
-    const levels = chunk(zone.words, LEVEL_SIZE);
+    const levels = chunk(zone.words, zone.levelSize || LEVEL_SIZE);
     const unlocked = zoneUnlocked(zi);
     const z = document.createElement("div");
     z.className = `zone zone-${zone.id}${unlocked ? "" : " locked"}`;
@@ -620,13 +629,22 @@ let session = null;
 function startLevel(zone, levelIndex, words) {
   const sig = SIG[zone.id];
   const rounds = [];
-  words.forEach((w) => {
-    if (wordStat(w.word).c < 3) rounds.push({ type: "intro", word: w });
-    rounds.push({ type: sig, word: w, mode: "listen" });
-  });
-  shuffle(words).forEach((w) => rounds.push({ type: sig, word: w, mode: "read" }));
-  shuffle(words).slice(0, 2).forEach((w) => rounds.push({ type: "build", word: w }));
-  rounds.push({ type: "echo", word: shuffle(words)[0] });
+  if (zone.id === "abc") {
+    // letters: recognition + echo only — no read/listen split, no spelling
+    words.forEach((w) => {
+      rounds.push({ type: "intro", word: w });
+      rounds.push({ type: sig, word: w, mode: "listen" });
+    });
+    rounds.push({ type: "echo", word: shuffle(words)[0] });
+  } else {
+    words.forEach((w) => {
+      if (wordStat(w.word).c < 3) rounds.push({ type: "intro", word: w });
+      rounds.push({ type: sig, word: w, mode: "listen" });
+    });
+    shuffle(words).forEach((w) => rounds.push({ type: sig, word: w, mode: "read" }));
+    shuffle(words).slice(0, 2).forEach((w) => rounds.push({ type: "build", word: w }));
+    rounds.push({ type: "echo", word: shuffle(words)[0] });
+  }
   session = { zone, levelIndex, rounds, i: 0, mistakes: 0, streak: 0, boss: false, requeued: {} };
   beginSession();
 }
@@ -634,9 +652,11 @@ function startLevel(zone, levelIndex, words) {
 function startBoss(zone) {
   const sig = SIG[zone.id];
   const words = shuffle(zone.words.slice().sort((a, b) => (wordStat(a.word).c - wordStat(a.word).w) - (wordStat(b.word).c - wordStat(b.word).w)).slice(0, 8));
-  const rounds = words.map((w, i) => (
-    i % 3 === 2 ? { type: "build", word: w } : { type: sig, word: w, mode: i % 3 === 0 ? "listen" : "read" }
-  ));
+  const rounds = zone.id === "abc"
+    ? words.map((w, i) => (i % 4 === 3 ? { type: "echo", word: w } : { type: sig, word: w, mode: "listen" }))
+    : words.map((w, i) => (
+        i % 3 === 2 ? { type: "build", word: w } : { type: sig, word: w, mode: i % 3 === 0 ? "listen" : "read" }
+      ));
   session = { zone, rounds, i: 0, mistakes: 0, streak: 0, boss: true, bossHp: rounds.length, bossMax: rounds.length, requeued: {} };
   beginSession();
 }
@@ -759,16 +779,19 @@ function distractors(word, zone, n) {
   return shuffle(zone.words.filter((w) => w.word !== word.word)).slice(0, n);
 }
 // listen mode: hear the word, find the picture. read mode: see the picture, find the written word.
+// single-letter words (ABC zone) always show the letter glyph itself, since
+// the point is recognizing the letter shape, not its picture-word.
 function optionLabel(opt, mode) {
+  if (opt.word.length === 1) return `<span class="letter-glyph">${opt.word.toUpperCase()}</span>`;
   return mode === "read" ? `<span class="word-tag">${opt.word.toUpperCase()}</span>` : `<span class="opt-emoji">${opt.emoji}</span>`;
 }
 function promptFor(word, mode, area) {
-  if (mode === "read") area.insertAdjacentHTML("beforeend", `<div class="read-prompt">${word.emoji}</div>`);
+  if (word.word.length > 1 && mode === "read") area.insertAdjacentHTML("beforeend", `<div class="read-prompt">${word.emoji}</div>`);
   else area.appendChild(speakBtn(word.word));
   setTimeout(() => speak(word.word), 600);
 }
 // each zone plays its own signature game
-const SIG = { meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo", mix: "zap" };
+const SIG = { abc: "zap", meadow: "catch", biome: "mine", stadium: "kick", ocean: "fish", arcade: "zap", brainrot: "pogo", mix: "zap" };
 
 // bosses/brainrots render either an illustrated image or, if none is set, an emoji fallback
 function brainrotArt(obj, cls = "") {
@@ -1316,7 +1339,7 @@ window.addEventListener("hashchange", () => location.reload());
 if (location.hash === "#reset") { S = defaultState(); save(); }
 if (location.hash === "#all") {
   ZONES.forEach((z) => {
-    S.zones[z.id] = { stars: chunk(z.words, LEVEL_SIZE).map(() => 3), boss: true };
+    S.zones[z.id] = { stars: chunk(z.words, z.levelSize || LEVEL_SIZE).map(() => 3), boss: true };
     if (!S.brainrots.includes(z.boss.name)) S.brainrots.push(z.boss.name);
   });
   S.coins += 300;
