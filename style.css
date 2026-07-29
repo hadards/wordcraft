@@ -1245,67 +1245,16 @@ body[class*="theme-"] .built-row .built-word { border-radius: 0; }
   border-radius: 0;
 }
 
-/* flat retro zone colors on the overworld too — cartridge look, no smooth blends */
+/* real illustrated scenery behind each zone, not a flat color swatch */
 #map-world { background: #0a0d18; }
-.zone-meadow  { background: #3f9e4e; }
-.zone-biome   { background: #6e4a24; }
-.zone-stadium { background: #1b2a4a; }
-.zone-ocean   { background: #0b5e8e; }
-.zone-arcade  { background: #2a1b54; }
-.zone-brainrot { background: #8e2270; }
+.zone { background-size: cover; background-position: center; background-repeat: no-repeat; }
+.zone-meadow   { background-image: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.05)), url("assets/backgrounds/meadow.jpg"); }
+.zone-biome    { background-image: linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.1)), url("assets/backgrounds/biome.jpg"); }
+.zone-stadium  { background-image: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url("assets/backgrounds/stadium.jpg"); }
+.zone-ocean    { background-image: linear-gradient(rgba(0,20,40,.15), rgba(0,20,40,.15)), url("assets/backgrounds/ocean.jpg"); }
+.zone-arcade   { background-image: linear-gradient(rgba(10,0,30,.35), rgba(10,0,30,.35)), url("assets/backgrounds/arcade.jpg"); }
+.zone-brainrot { background-image: linear-gradient(rgba(40,0,40,.15), rgba(40,0,40,.15)), url("assets/backgrounds/brainrot.jpg"); }
 .map-path path { stroke-dasharray: 6 10; stroke-linecap: butt; stroke-width: 6; }
-
-/* layered background silhouettes so each zone reads as a real place, not a color swatch */
-.zone-inner::before {
-  content: "";
-  position: absolute;
-  left: 0; right: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-.zone-meadow .zone-inner::before {
-  bottom: 0; height: 90px;
-  background:
-    radial-gradient(ellipse 130px 90px at 8% 100%, #57b32e 0%, #57b32e 60%, transparent 62%),
-    radial-gradient(ellipse 160px 110px at 32% 100%, #4aa023 0%, #4aa023 60%, transparent 62%),
-    radial-gradient(ellipse 140px 90px at 62% 100%, #57b32e 0%, #57b32e 60%, transparent 62%),
-    radial-gradient(ellipse 170px 110px at 90% 100%, #4aa023 0%, #4aa023 60%, transparent 62%);
-}
-.zone-biome .zone-inner::before {
-  top: 0; height: 60px;
-  clip-path: polygon(0 0, 100% 0, 100% 15%, 92% 60%, 84% 20%, 76% 65%, 68% 15%, 60% 55%, 52% 10%, 44% 60%, 36% 20%, 28% 65%, 20% 15%, 12% 55%, 4% 10%, 0 45%);
-  background: rgba(0,0,0,.4);
-}
-.zone-stadium .zone-inner::before {
-  top: 0; height: 50px;
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 18px, rgba(255,255,255,.03) 18px 36px);
-  clip-path: polygon(0 100%, 100% 100%, 100% 30%, 0 0);
-}
-.zone-ocean .zone-inner::before {
-  bottom: 0; height: 70px;
-  background:
-    radial-gradient(ellipse 90px 60px at 15% 100%, #0a4f78 0%, #0a4f78 55%, transparent 58%),
-    radial-gradient(ellipse 110px 70px at 45% 100%, #0d5a86 0%, #0d5a86 55%, transparent 58%),
-    radial-gradient(ellipse 95px 60px at 75% 100%, #0a4f78 0%, #0a4f78 55%, transparent 58%);
-}
-.zone-arcade .zone-inner::before {
-  bottom: 0; height: 100px;
-  background:
-    linear-gradient(0deg, #1c1140 0%, #1c1140 30%, transparent 32%),
-    repeating-linear-gradient(90deg, rgba(79,180,255,.5) 0 3px, transparent 3px 46px),
-    repeating-linear-gradient(90deg, rgba(255,79,163,.35) 23px 26px, transparent 26px 69px);
-}
-.zone-brainrot .zone-inner::before {
-  top: 0; height: 100%;
-  background:
-    radial-gradient(circle 2px at 12% 15%, rgba(255,255,255,.7), transparent),
-    radial-gradient(circle 2px at 55% 8%, rgba(255,255,255,.6), transparent),
-    radial-gradient(circle 2px at 78% 25%, rgba(255,255,255,.7), transparent),
-    radial-gradient(circle 2px at 30% 55%, rgba(255,255,255,.5), transparent),
-    radial-gradient(circle 2px at 88% 60%, rgba(255,255,255,.6), transparent),
-    radial-gradient(circle 2px at 20% 85%, rgba(255,255,255,.5), transparent),
-    radial-gradient(circle 2px at 65% 90%, rgba(255,255,255,.6), transparent);
-}
 
 #btn-skip {
   position: fixed;
