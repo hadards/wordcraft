@@ -452,14 +452,7 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
   overflow: hidden;
 }
 
-/* zone theming of the game screen */
-body.theme-meadow  { background: linear-gradient(var(--sky-top), #b9eda0); }
-body.theme-biome   { background: linear-gradient(#8fd0ff, #c9b08a); }
-body.theme-stadium { background: linear-gradient(#1b2a4a, #35608a); }
-body.theme-ocean   { background: linear-gradient(#0b5e8e, #063050); }
-body.theme-arcade  { background: linear-gradient(#1c1140, #4a2d8f); }
-body.theme-brainrot { background: linear-gradient(#551b6e, #d63384); }
-body.theme-stadium #stage, body.theme-arcade #stage, body.theme-ocean #stage, body.theme-brainrot #stage { color: #fff; }
+/* zone theming of the game screen (background-image itself set further down, near the real zone photo rules) */
 body.theme-ocean .build-slot, body.theme-brainrot .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
 
 /* big speaker button — replays the word */
@@ -709,17 +702,21 @@ body.theme-stadium .build-slot, body.theme-arcade .build-slot { border-color: rg
   height: min(48vh, 360px);
   border-radius: 20px;
   overflow: hidden;
-  background: rgba(255,255,255,.12);
-  border: 3px solid rgba(255,255,255,.25);
 }
 .fall-item, .swim-item, .zap-item {
-  background: none;
-  border: none;
+  background: radial-gradient(circle at 35% 30%, #fffef7, #f0dfae);
+  border: 3px solid #fff;
+  border-radius: 50%;
   cursor: pointer;
-  padding: 6px;
+  width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
   line-height: 1;
-  filter: drop-shadow(0 4px 5px rgba(0,0,0,.3));
+  box-shadow: 0 5px 0 rgba(0,0,0,.22), 0 8px 12px rgba(0,0,0,.25);
+  font-size: 1.8rem;
 }
+.fall-item .opt-emoji, .swim-item .opt-emoji, .zap-item .opt-emoji { font-size: 1.9rem; }
+.fall-item .word-tag, .swim-item .word-tag, .zap-item .word-tag { font-size: .62rem; padding: 3px 6px; }
 .fall-item { position: absolute; top: -20%; animation: fall-loop linear infinite; }
 @keyframes fall-loop { from { top: -20%; } to { top: 105%; } }
 .swim-item { position: absolute; left: -22%; animation: swim-loop linear infinite; }
@@ -1228,21 +1225,27 @@ body.theme-brainrot #stage-ground{ --t1: #7a1f4e; --t2: #6b1a44; }
 .platform:active { transform: translateY(3px); }
 .pogo-kid { position: absolute; bottom: 4px; left: 50%; margin-left: -20px; z-index: 3; }
 
-/* ============ KEEN LEVELS: bright sprites on flat dark backgrounds ============ */
-/* real Keen levels are colored tiles on near-black — kill the soft gradients in games */
-body.theme-meadow  { background: #071523; }
-body.theme-biome   { background: #0d0702; }
-body.theme-stadium { background: #04091c; }
-body.theme-ocean   { background: #021520; }
-body.theme-arcade  { background: #0a0417; }
-body.theme-brainrot { background: #170313; }
+/* ============ GAME SCREENS: real zone scenery instead of flat dark ============ */
+body[class*="theme-"] {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+body.theme-meadow  { background-image: linear-gradient(rgba(255,255,255,.1), rgba(255,255,255,.25)), url("assets/backgrounds/meadow.jpg"); }
+body.theme-biome   { background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.5)), url("assets/backgrounds/biome.jpg"); }
+body.theme-stadium { background-image: linear-gradient(rgba(0,0,0,.4), rgba(0,0,0,.55)), url("assets/backgrounds/stadium.jpg"); }
+body.theme-ocean   { background-image: linear-gradient(rgba(0,20,50,.35), rgba(0,20,50,.5)), url("assets/backgrounds/ocean.jpg"); }
+body.theme-arcade  { background-image: linear-gradient(rgba(10,0,35,.5), rgba(10,0,35,.65)), url("assets/backgrounds/arcade.jpg"); }
+body.theme-brainrot { background-image: linear-gradient(rgba(50,0,50,.35), rgba(50,0,50,.5)), url("assets/backgrounds/brainrot.jpg"); }
 body[class*="theme-"] #stage { color: #fff; }
 body[class*="theme-"] .build-slot { border-color: rgba(255,255,255,.4); color: #fff; }
 body[class*="theme-"] .built-row .built-word { border-radius: 0; }
 .catch-sky, .fish-sea {
-  background: rgba(255,255,255,.05);
-  border: 3px solid rgba(255,255,255,.18);
-  border-radius: 0;
+  background: rgba(0,0,0,.18);
+  border: 3px solid rgba(255,255,255,.28);
+  border-radius: 16px;
+  backdrop-filter: blur(1px);
 }
 
 /* real illustrated scenery behind each zone, not a flat color swatch */
