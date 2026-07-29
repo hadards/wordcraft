@@ -189,6 +189,43 @@ function celebrate(html, ms, onDone) {
   confetti();
   setTimeout(() => { el.classList.add("hidden"); if (onDone) onDone(); }, ms);
 }
+// draw n unowned brainrots for a pack, common-weighted so legendaries stay rare pulls
+function drawPack(n) {
+  const pool = BRAINROTS.filter((b) => !S.brainrots.includes(b.name));
+  const weight = { common: 10, rare: 5, epic: 2, legendary: 1 };
+  const picks = [];
+  for (let i = 0; i < n && pool.length; i++) {
+    const bag = [];
+    pool.forEach((b) => { for (let w = 0; w < (weight[b.rarity] || 1); w++) bag.push(b); });
+    const chosen = bag[Math.floor(Math.random() * bag.length)];
+    picks.push(chosen);
+    pool.splice(pool.indexOf(chosen), 1);
+  }
+  return picks;
+}
+
+// pack-opening moment: several cards fan out and reveal one at a time
+function revealPack(cards, onDone) {
+  if (!cards.length) return onDone && onDone();
+  cards.forEach((c) => S.brainrots.push(c.name));
+  save();
+  const el = $("celebrate");
+  el.innerHTML = `<div class="pack-fan">${cards.map((br) => `
+    <div class="pack-fan-card rarity-${br.rarity}">
+      <div class="pack-card">
+        <div class="tcard-art">${brainrotArt(br, "tcard-img")}</div>
+        <div class="tcard-rarity-tag">${RARITY_INFO[br.rarity].label}</div>
+        <div class="tcard-name">${br.name}</div>
+      </div>
+    </div>`).join("")}</div>
+    <div class="celebrate-text">${cards.length > 1 ? "NEW CARDS!" : "NEW CARD!"}</div>`;
+  el.classList.remove("hidden");
+  sfx.fanfare();
+  confetti();
+  speak(cards.length > 1 ? "New cards!" : `You got ${cards[0].name}!`);
+  setTimeout(() => { el.classList.add("hidden"); if (onDone) onDone(); }, 1600 + cards.length * 700);
+}
+
 // pack-opening moment: card flies in, spins, settles — rarity-colored burst
 function revealNewCard(br, rarity, onDone) {
   const el = $("celebrate");
@@ -661,20 +698,30 @@ function endSession() {
     if (!alreadyOwned) S.brainrots.push(s.zone.boss.name);
     save();
     if (alreadyOwned) {
+      // replay: no new pack, just the coin payout
       sfx.fanfare();
       celebrate(`<div class="celebrate-big">${brainrotArt(s.zone.boss, "celebrate-img")}</div><div class="celebrate-text">YOU STOLE</div><div class="celebrate-text">${s.zone.boss.name.toUpperCase()}!</div><div class="celebrate-text">+ 50 🪙</div>`, 3600, renderMap);
       speak(`You got ${s.zone.boss.name}! Amazing!`);
     } else {
-      revealNewCard(s.zone.boss, s.zone.boss.rarity || "legendary", renderMap);
+      // first-time boss win: the boss card itself, plus a 2-card bonus pack
+      revealNewCard(s.zone.boss, s.zone.boss.rarity || "legendary", () => {
+        const bonus = drawPack(2);
+        revealPack(bonus, renderMap);
+      });
     }
   } else {
     const stars = s.mistakes === 0 ? 3 : s.mistakes <= 2 ? 2 : 1;
+    const firstClear = !zs.stars[s.levelIndex];
     zs.stars[s.levelIndex] = Math.max(zs.stars[s.levelIndex] || 0, stars);
     S.coins += stars * 5;
     save();
     sfx.fanfare();
     const starHTML = Array.from({ length: 3 }, (_, i) => `<span>${i < stars ? "⭐" : "☆"}</span>`).join("");
-    celebrate(`<div class="celebrate-big">🎉</div><div class="celebrate-stars">${starHTML}</div><div class="celebrate-text">+ ${stars * 5} 🪙</div>`, 2800, renderMap);
+    celebrate(`<div class="celebrate-big">🎉</div><div class="celebrate-stars">${starHTML}</div><div class="celebrate-text">+ ${stars * 5} 🪙</div>`, 2800, () => {
+      // first time clearing this level: open a card pack too, not just replays
+      if (firstClear) revealPack(drawPack(3), renderMap);
+      else renderMap();
+    });
     speak(stars === 3 ? "Perfect! Three stars!" : "Great job!");
   }
   session = null;
