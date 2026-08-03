@@ -1,48 +1,46 @@
 // WordCraft content. Add a word = add one line: { word, emoji }.
 // Words are always taught/displayed in UPPERCASE.
+
+// Full alphabet, letter -> picture-word pairing shown on the intro card.
+// Used both as the distractor pool for any letter round (see distractors()
+// in game.js) and as the source for the per-zone `letters` intro below.
+const ALPHABET = [
+  { word: "a", emoji: "🍎" },
+  { word: "b", emoji: "🎈" },
+  { word: "c", emoji: "🐱" },
+  { word: "d", emoji: "🐶" },
+  { word: "e", emoji: "🥚" },
+  { word: "f", emoji: "🐸" },
+  { word: "g", emoji: "🎁" },
+  { word: "h", emoji: "🏠" },
+  { word: "i", emoji: "🍦" },
+  { word: "j", emoji: "🧃" },
+  { word: "k", emoji: "🔑" },
+  { word: "l", emoji: "🦁" },
+  { word: "m", emoji: "🌙" },
+  { word: "n", emoji: "👃" },
+  { word: "o", emoji: "🐙" },
+  { word: "p", emoji: "🐷" },
+  { word: "q", emoji: "👸" },
+  { word: "r", emoji: "🌈" },
+  { word: "s", emoji: "☀️" },
+  { word: "t", emoji: "🌳" },
+  { word: "u", emoji: "☂️" },
+  { word: "v", emoji: "🎻" },
+  { word: "w", emoji: "🐺" },
+  { word: "x", emoji: "❌" },
+  { word: "y", emoji: "🪀" },
+  { word: "z", emoji: "🦓" },
+];
+const letterSet = (...letters) => letters.map((l) => ALPHABET.find((a) => a.word === l));
+
 const ZONES = [
-  {
-    // letters, not whole words: word is the single letter, spoken as its
-    // letter name; emoji is the picture-word pairing shown on the intro card
-    id: "abc",
-    name: "ABC Town",
-    icon: "🔤",
-    levelSize: 5,
-    boss: { name: "Nyan Cat", img: "assets/brainrots/nyan_cat.png", rarity: "legendary", stats: { speed: 8, silly: 9, power: 5 } },
-    words: [
-      { word: "a", emoji: "🍎" },
-      { word: "b", emoji: "🎈" },
-      { word: "c", emoji: "🐱" },
-      { word: "d", emoji: "🐶" },
-      { word: "e", emoji: "🥚" },
-      { word: "f", emoji: "🐸" },
-      { word: "g", emoji: "🎁" },
-      { word: "h", emoji: "🏠" },
-      { word: "i", emoji: "🍦" },
-      { word: "j", emoji: "🧃" },
-      { word: "k", emoji: "🔑" },
-      { word: "l", emoji: "🦁" },
-      { word: "m", emoji: "🌙" },
-      { word: "n", emoji: "👃" },
-      { word: "o", emoji: "🐙" },
-      { word: "p", emoji: "🐷" },
-      { word: "q", emoji: "👸" },
-      { word: "r", emoji: "🌈" },
-      { word: "s", emoji: "☀️" },
-      { word: "t", emoji: "🌳" },
-      { word: "u", emoji: "☂️" },
-      { word: "v", emoji: "🎻" },
-      { word: "w", emoji: "🐺" },
-      { word: "x", emoji: "❌" },
-      { word: "y", emoji: "🪀" },
-      { word: "z", emoji: "🦓" },
-    ],
-  },
   {
     id: "meadow",
     name: "Starter Meadow",
     icon: "🌈",
     boss: { name: "Campfire Buddy", img: "assets/brainrots/campfire_dog.png", rarity: "legendary", stats: { speed: 6, silly: 8, power: 9 } },
+    letters: letterSet("c", "d", "b", "f", "a"),
     words: [
       { word: "cat", emoji: "🐱" },
       { word: "dog", emoji: "🐶" },
@@ -67,6 +65,7 @@ const ZONES = [
     name: "Blocky Biome",
     icon: "⛏️",
     boss: { name: "Steve", img: "assets/brainrots/minecraft_steve.png", rarity: "legendary", stats: { speed: 5, silly: 6, power: 10 } },
+    letters: letterSet("s", "t", "h", "w", "e"),
     words: [
       { word: "diamond", emoji: "💎" },
       { word: "sword", emoji: "🗡️" },
@@ -91,6 +90,7 @@ const ZONES = [
     name: "Super Stadium",
     icon: "⚽",
     boss: { name: "Blocky Miner", img: "assets/brainrots/roblox_miner.png", rarity: "legendary", stats: { speed: 7, silly: 5, power: 9 } },
+    letters: letterSet("g", "r", "k", "j"),
     words: [
       { word: "ball", emoji: "⚽" },
       { word: "goal", emoji: "🥅" },
@@ -115,6 +115,7 @@ const ZONES = [
     name: "Ocean World",
     icon: "🌊",
     boss: { name: "Splash", img: "assets/brainrots/water_drop.png", rarity: "legendary", stats: { speed: 9, silly: 7, power: 7 } },
+    letters: letterSet("o", "i", "l", "m"),
     words: [
       { word: "shark", emoji: "🦈" },
       { word: "whale", emoji: "🐋" },
@@ -139,6 +140,7 @@ const ZONES = [
     name: "Neon Arcade",
     icon: "🕹️",
     boss: { name: "Gameboy Buddy", img: "assets/brainrots/gameboy_buddy.png", rarity: "legendary", stats: { speed: 8, silly: 9, power: 6 } },
+    letters: letterSet("p", "n", "q", "u"),
     words: [
       { word: "jump", emoji: "🦘" },
       { word: "play", emoji: "🎮" },
@@ -164,6 +166,7 @@ const ZONES = [
     name: "Brainrot Land",
     icon: "🧠",
     boss: { name: "Troll Face", img: "assets/brainrots/troll_face.png", rarity: "legendary", stats: { speed: 10, silly: 10, power: 8 } },
+    letters: letterSet("v", "x", "y", "z"),
     words: [
       { word: "banana", emoji: "🍌" },
       { word: "monkey", emoji: "🐵" },

@@ -277,7 +277,9 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
   padding-bottom: 70px;
 }
 .zone { position: relative; height: 750px; }
-.zone-abc { height: 1050px; }
+/* zones with a letters intro get 1-2 extra levels before their words start */
+.zone-meadow, .zone-biome { height: 1050px; }
+.zone-stadium, .zone-ocean, .zone-arcade, .zone-brainrot { height: 900px; }
 .zone-inner { position: relative; max-width: 560px; height: 100%; margin: 0 auto; }
 .zone-banner {
   position: absolute;
@@ -443,6 +445,7 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
 #stage {
   flex: 1;
   width: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -450,7 +453,8 @@ body { background: linear-gradient(var(--sky-top), var(--sky-bottom)); }
   gap: 22px;
   padding: 12px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* zone theming of the game screen (background-image itself set further down, near the real zone photo rules) */
@@ -773,9 +777,9 @@ body.theme-stadium .build-slot, body.theme-arcade .build-slot { border-color: rg
 @keyframes mic-pulse { 0%,100% { transform: scale(1); box-shadow: 0 8px 0 #8c1a52, 0 0 0 0 rgba(255,79,163,.6); } 50% { transform: scale(1.07); box-shadow: 0 8px 0 #8c1a52, 0 0 0 24px rgba(255,79,163,0); } }
 
 /* Boss */
-.boss-emoji { font-size: clamp(5rem, 24vw, 9rem); line-height: 1.1; transition: transform .15s; }
+.boss-emoji { font-size: clamp(5rem, min(24vw, 20vh), 9rem); line-height: 1.1; transition: transform .15s; }
 .boss-emoji.hit { animation: boss-hit .45s; }
-.boss-emoji .brainrot-img { width: clamp(140px, 34vw, 240px); height: auto; filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)); }
+.boss-emoji .brainrot-img { width: clamp(140px, min(34vw, 28vh), 240px); height: auto; filter: drop-shadow(0 8px 10px rgba(0,0,0,.35)); }
 
 /* illustrated brainrot art: consistent tile treatment wherever it appears */
 .brainrot-img { display: block; image-rendering: -webkit-optimize-contrast; }
@@ -1078,6 +1082,13 @@ body.theme-stadium .build-slot, body.theme-arcade .build-slot { border-color: rg
   .mascot.corner { display: none; }
 }
 
+/* shorter windows (laptops with browser chrome, tablets): shrink boss visuals so nothing clips */
+@media (max-height: 700px) {
+  .boss-emoji { font-size: clamp(3.2rem, 16vh, 9rem); }
+  .boss-emoji .brainrot-img { width: clamp(100px, 20vh, 240px); }
+  .boss-hp { font-size: 1.3rem; gap: 4px; }
+}
+
 /* ============ KEEN SKIN: EGA-era pixel chrome over the colorful worlds ============ */
 :root { --font-pixel: "Press Start 2P", monospace; --panel: #a8b0c0; --panel-hi: #dde3ee; --panel-lo: #5c6578; }
 
@@ -1185,7 +1196,6 @@ body::after {
   background-size: 16px 16px;
   border-top: 4px solid rgba(0,0,0,.35);
 }
-.zone-abc .terrain     { --t1: #e8b93c; --t2: #d9a41e; }
 .zone-meadow .terrain  { --t1: #4e9a22; --t2: #42901e; }
 .zone-biome .terrain   { --t1: #6b421c; --t2: #5d3916; }
 .zone-stadium .terrain { --t1: #22304f; --t2: #1c2843; }
@@ -1202,7 +1212,6 @@ body::after {
   background-size: 16px 16px;
   border-top: 4px solid rgba(0,0,0,.35);
 }
-body.theme-abc #stage-ground     { --t1: #e8b93c; --t2: #d9a41e; }
 body.theme-meadow #stage-ground  { --t1: #4e9a22; --t2: #42901e; }
 body.theme-biome #stage-ground   { --t1: #6b421c; --t2: #5d3916; }
 body.theme-stadium #stage-ground { --t1: #22304f; --t2: #1c2843; }
@@ -1257,7 +1266,6 @@ body[class*="theme-"] {
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
-body.theme-abc     { background-image: linear-gradient(rgba(255,220,100,.25), rgba(255,220,100,.4)), url("assets/backgrounds/meadow.jpg"); }
 body.theme-meadow  { background-image: linear-gradient(rgba(255,255,255,.1), rgba(255,255,255,.25)), url("assets/backgrounds/meadow.jpg"); }
 body.theme-biome   { background-image: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.5)), url("assets/backgrounds/biome.jpg"); }
 body.theme-stadium { background-image: linear-gradient(rgba(0,0,0,.4), rgba(0,0,0,.55)), url("assets/backgrounds/stadium.jpg"); }
@@ -1278,7 +1286,6 @@ body[class*="theme-"] .built-row .built-word { border-radius: 0; }
 /* real illustrated scenery behind each zone, not a flat color swatch */
 #map-world { background: #0a0d18; }
 .zone { background-size: cover; background-position: center; background-repeat: no-repeat; }
-.zone-abc      { background-image: linear-gradient(rgba(255,220,100,.2), rgba(255,220,100,.2)), url("assets/backgrounds/meadow.jpg"); }
 .zone-meadow   { background-image: linear-gradient(rgba(255,255,255,.05), rgba(255,255,255,.05)), url("assets/backgrounds/meadow.jpg"); }
 .zone-biome    { background-image: linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.1)), url("assets/backgrounds/biome.jpg"); }
 .zone-stadium  { background-image: linear-gradient(rgba(0,0,0,.25), rgba(0,0,0,.25)), url("assets/backgrounds/stadium.jpg"); }
